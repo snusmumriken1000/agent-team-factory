@@ -50,6 +50,37 @@ describe("buildDashboardHtml", () => {
     expect(htmlWithout).not.toContain("<th>Issue</th>");
   });
 
+  it("ハーネス / ガードレール / フィードバックループの 3 要素セクションを含む", () => {
+    const runs: RunRecord[] = [
+      { agent: "market-researcher", status: "success", finishedAt: "2026-07-28T10:00:00Z" },
+      { agent: "product-planner", status: "failure", finishedAt: "2026-07-28T11:00:00Z" },
+    ];
+    const html = buildDashboardHtml(manifest, runs);
+    expect(html).toContain("実行環境の仕組み");
+    expect(html).toContain("ハーネス");
+    expect(html).toContain("ガードレール");
+    expect(html).toContain("フィードバックループ");
+    // マニフェスト・実行記録から動的に導出される値
+    expect(html).toContain("2 体"); // エージェント数
+    expect(html).toContain("1 本定義"); // チーム内で完結するフローの数(除外辺はカウントしない)
+    expect(html).toContain("現在 2 件"); // 実行記録数
+    expect(html).toContain("現在 1 件"); // failure 数
+    expect(html).toContain("標準構成(最大 5 体)");
+  });
+
+  it("Issue 駆動でないとき、Issue 関連の仕組みは未導入として表示する", () => {
+    const html = buildDashboardHtml(manifest, []);
+    expect(html).toContain("未導入(Issue 駆動を有効にすると追加)");
+
+    const issueDriven = {
+      ...manifest,
+      requirements: { ...manifest.requirements, issueDriven: true },
+    };
+    const htmlOn = buildDashboardHtml(issueDriven, []);
+    expect(htmlOn).not.toContain("未導入(Issue 駆動を有効にすると追加)");
+    expect(htmlOn).toContain("Issue 起点のタスク供給");
+  });
+
   it("実行記録をテーブルに反映し、HTML をエスケープする", () => {
     const runs: RunRecord[] = [
       {

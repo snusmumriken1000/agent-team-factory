@@ -55,6 +55,96 @@ function buildFlowChart(manifest: TeamManifest): string {
   return lines.join("\n");
 }
 
+/** teamSize → 表示用ラベル */
+const TEAM_SIZE_LABEL: Record<string, string> = {
+  minimal: "最小構成(最大 3 体)",
+  standard: "標準構成(最大 5 体)",
+  full: "フル構成(上限なし)",
+};
+
+/**
+ * この実行環境に導入されている仕組みを、ハーネス / ガードレール / フィードバックループの
+ * 3 要素に分類したカードを組み立てる。項目はマニフェストと実行記録から動的に導出し、
+ * Issue 駆動が無効な場合は関連項目を「未導入」として薄く表示する。
+ */
+function buildMechanismSection(manifest: TeamManifest, runs: RunRecord[]): string {
+  const issueDriven = manifest.requirements.issueDriven ?? false;
+  const failureCount = runs.filter((r) => r.status === "failure").length;
+  const flowCount = manifest.flow.filter(
+    ([from, to]) =>
+      manifest.agents.some((a) => a.name === from) && manifest.agents.some((a) => a.name === to),
+  ).length;
+  const teamSizeLabel = TEAM_SIZE_LABEL[manifest.requirements.teamSize] ?? manifest.requirements.teamSize;
+
+  const item = (title: string, body: string, enabled = true) =>
+    enabled
+      ? `<li><b>${title}</b> — ${body}</li>`
+      : `<li class="off"><b>${title}</b> — ${body}<span class="off-label">未導入(Issue 駆動を有効にすると追加)</span></li>`;
+
+  const harness = [
+    item(
+      "エージェント定義",
+      `<code>.claude/agents/</code> に ${manifest.agents.length} 体。プリセット「${escapeHtml(manifest.presetName)}」を ${escapeHtml(manifest.project)} 向けにカスタマイズ`,
+    ),
+    item("入出力フロー", `エージェント間の受け渡し経路を ${flowCount} 本定義(下の構成図に対応)`),
+    item("チームマニフェスト", `<code>.claude/team.json</code> がチーム構成の単一情報源(再生成・可視化の入力)`),
+    item(
+      "Issue 起点のタスク供給",
+      `issue-manager が GitHub Issue を起票・整理し、各エージェントへ振り分け`,
+      issueDriven,
+    ),
+  ];
+
+  const guardrails = [
+    item("役割スコープの限定", `各エージェントは定義された責務の範囲でのみ作業(構成は上のカード参照)`),
+    item("チーム規模の上限", `${escapeHtml(teamSizeLabel)}でエージェント数を制御`),
+    item("既存定義の保護", `導入時に既存の <code>.claude/agents/</code> を上書きしない(上書きは <code>--force</code> 必須)`),
+    item(
+      "Issue 起点の着手制限",
+      `対応する Issue のない作業には着手せず、先に Issue の起票を提案`,
+      issueDriven,
+    ),
+  ];
+
+  const feedback = [
+    item(
+      "実行記録の自己申告",
+      `全エージェントが作業完了時に <code>.claude/atf-logs/runs.jsonl</code> へ 1 行追記(現在 ${runs.length} 件)`,
+    ),
+    item("失敗の可視化", `status: failure の記録を実行記録テーブルに ❌ 表示(現在 ${failureCount} 件)`),
+    item("ダッシュボード再生成", `<code>atf report</code> で最新の実行記録を反映した本ページを再生成`),
+    item(
+      "Issue へのトレース",
+      `実行記録・コミットメッセージに Issue 番号を残し、進捗を Issue 上で追跡`,
+      issueDriven,
+    ),
+  ];
+
+  return `<div class="mechanisms">
+  <div class="mech mech-harness">
+    <h3>🛠 ハーネス</h3>
+    <p class="mech-sub">エージェントを動かす骨組み</p>
+    <ul>
+${harness.join("\n")}
+    </ul>
+  </div>
+  <div class="mech mech-guardrail">
+    <h3>🚧 ガードレール</h3>
+    <p class="mech-sub">逸脱を防ぐ制約</p>
+    <ul>
+${guardrails.join("\n")}
+    </ul>
+  </div>
+  <div class="mech mech-feedback">
+    <h3>🔄 フィードバックループ</h3>
+    <p class="mech-sub">結果を観測して改善につなげる仕組み</p>
+    <ul>
+${feedback.join("\n")}
+    </ul>
+  </div>
+</div>`;
+}
+
 /** エージェントごとの実行記録テーブル行 */
 function buildRunRows(runs: RunRecord[], issueDriven: boolean): string {
   const columns = issueDriven ? 7 : 6;
@@ -136,6 +226,19 @@ export function buildDashboardHtml(manifest: TeamManifest, runs: RunRecord[]): s
   .bar-label { width: 160px; font-size: .85rem; text-align: right; }
   .bar { height: 16px; background: #6c6cd9; border-radius: 3px; min-width: 2px; }
   .bar-count { font-size: .85rem; color: #666; }
+  .mechanisms { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+  .mech { border: 1px solid #e0e0ef; border-top: 4px solid #999; border-radius: 8px; padding: 1rem; background: #fafaff; }
+  .mech-harness { border-top-color: #3b3b8f; }
+  .mech-guardrail { border-top-color: #d98a2b; }
+  .mech-feedback { border-top-color: #2b9d5c; }
+  .mech h3 { margin: 0; font-size: 1rem; }
+  .mech-sub { margin: .2rem 0 .6rem; font-size: .8rem; color: #888; }
+  .mech ul { margin: 0; padding-left: 1.2rem; }
+  .mech li { font-size: .85rem; line-height: 1.6; margin-bottom: .5rem; }
+  .mech li.off { color: #aaa; }
+  .mech li.off b { color: #aaa; }
+  .off-label { display: block; font-size: .75rem; color: #bbb; }
+  .mech code { background: #eeeefa; border-radius: 3px; padding: 0 .3rem; font-size: .8rem; }
 </style>
 </head>
 <body>
@@ -147,6 +250,9 @@ export function buildDashboardHtml(manifest: TeamManifest, runs: RunRecord[]): s
   <span>開発スタイル: ${issueDriven ? "Issue 駆動" : "通常"}</span>
   <span>実行記録: ${runs.length} 件</span>
 </p>
+
+<h2>実行環境の仕組み</h2>
+${buildMechanismSection(manifest, runs)}
 
 <h2>チーム構成・入出力フロー</h2>
 <pre class="mermaid">

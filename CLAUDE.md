@@ -33,7 +33,7 @@ hearing.ts  → Requirements ┘
 - `src/hearing.ts` — @inquirer/prompts による対話ヒアリング(開発フェーズ・重視観点・チーム規模・Issue 駆動の有無)→ `Requirements`
 - `src/presets.ts` — `templates/presets/` からプリセットをロードし、profile/requirements との一致でスコアリング(focus 一致を最重視: +5、言語/FW: +2、フェーズ: +1。focus がスコアを支配するのは意図的 — ユーザーの明示要件 > 自動検出)
 - `src/generator.ts` — 選ばれたプリセットのエージェント定義を `{{placeholder}}` 置換して対象リポジトリの `.claude/agents/` に書き込み、`.claude/team.json` にマニフェスト(`TeamManifest`)を記録。各エージェント定義の末尾に「完了時に `.claude/atf-logs/runs.jsonl` へ実行記録を追記する」指示を自動付与する。Issue 駆動(`requirements.issueDriven`)なら `templates/common/issue-manager.md` を teamSize の枠外で追加し、全エージェントに Issue 起点で動く指示を付与する
-- `src/report.ts` — `team.json` + `atf-logs/runs.jsonl` から自己完結 HTML ダッシュボード(`.claude/atf-dashboard.html`)を生成。チーム構成図は Mermaid(CDN)、実行記録はテーブル + 実行回数バーで可視化。エージェント由来の文字列は必ず `escapeHtml` を通すこと
+- `src/report.ts` — `team.json` + `atf-logs/runs.jsonl` から自己完結 HTML ダッシュボード(`.claude/atf-dashboard.html`)を生成。冒頭に「実行環境の仕組み」としてハーネス / ガードレール / フィードバックループの 3 要素カードを表示(項目はマニフェストと実行記録から動的に導出し、Issue 駆動オフ時は関連項目を「未導入」と薄く表示)。チーム構成図は Mermaid(CDN)、実行記録はテーブル + 実行回数バーで可視化。エージェント由来の文字列は必ず `escapeHtml` を通すこと
 
 ## プリセットの追加方法
 
