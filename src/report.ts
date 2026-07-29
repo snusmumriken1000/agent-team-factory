@@ -90,7 +90,7 @@ function buildMechanismSection(manifest: TeamManifest, runs: RunRecord[]): strin
     item("チームマニフェスト", `<code>.claude/team.json</code> がチーム構成の単一情報源(再生成・可視化の入力)`),
     item(
       "Issue 起点のタスク供給",
-      `issue-manager が GitHub Issue を起票・整理し、各エージェントへ振り分け`,
+      `issue-manager が GitHub Issue${manifest.requirements.githubRepo ? `(${escapeHtml(manifest.requirements.githubRepo)})` : ""} を起票・整理し、各エージェントへ振り分け`,
       issueDriven,
     ),
   ];
@@ -248,6 +248,7 @@ export function buildDashboardHtml(manifest: TeamManifest, runs: RunRecord[]): s
   <span>フェーズ: ${escapeHtml(manifest.requirements.phase)}</span>
   <span>重視観点: ${escapeHtml(manifest.requirements.focus.join(", "))}</span>
   <span>開発スタイル: ${issueDriven ? "Issue 駆動" : "通常"}</span>
+  <span>GitHub: ${escapeHtml(manifest.requirements.githubRepo ?? "(未設定)")}</span>
   <span>実行記録: ${runs.length} 件</span>
 </p>
 

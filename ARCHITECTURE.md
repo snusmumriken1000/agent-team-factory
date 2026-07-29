@@ -51,12 +51,15 @@ atf は「対象リポジトリの自動解析」と「対話ヒアリング」�
 - **言語**: 拡張子 → 言語のマッピング。ファイル数の多い順に並ぶ
 - **フレームワーク**: package.json の dependencies/devDependencies 名(react, next など)+ マーカーファイル(manage.py → django, Cargo.toml → cargo など)の 2 系統
 - **CI / テストの有無**: `.github/workflows` 等の存在、テストディレクトリ名・`*.test.*` / `*.spec.*` ファイル名
+- **GitHub リポジトリ**: `.git/config` の remote URL から owner/repo を抽出(https / ssh 両形式に対応)。ヒアリングのデフォルト値に使うだけなので検出できなくてもよい
 
 検出はヒューリスティックであり、外れても致命的にならない設計(スコアリングの加点材料に使われるだけで、ユーザーの明示要件が優先される)。
 
 ### hearing — 対話ヒアリング
 
-4 つの質問(開発フェーズ / 重視観点 / チーム規模 / Issue 駆動の有無)で `Requirements` を作る。**重視観点(focus)の選択肢はプリセットの match 条件と対応している**ため、新しい focus をプリセットで使う場合は hearing.ts にも選択肢を追加する必要がある(選択肢にない focus は永遠にマッチしない)。
+5 つの質問(開発フェーズ / 重視観点 / チーム規模 / GitHub リポジトリ / Issue 駆動の有無)で `Requirements` を作る。
+
+**使用する GitHub リポジトリは必ず確認する**。analyzer の検出値(remote URL 由来)はデフォルトとして提示するだけで、確認をスキップしない — 検出はヒューリスティックであり、フォークや別リポジトリの Issue を使う運用があり得るため。owner/repo 形式でバリデーションし、GitHub を使わないプロジェクトのために空欄(未設定)も許す。指定された値は Issue 駆動指示の起票先(`gh -R owner/repo`)、`{{githubRepo}}` プレースホルダ、ダッシュボードのメタ表示に使われる。**重視観点(focus)の選択肢はプリセットの match 条件と対応している**ため、新しい focus をプリセットで使う場合は hearing.ts にも選択肢を追加する必要がある(選択肢にない focus は永遠にマッチしない)。
 
 ### presets — ロードとスコアリング
 
@@ -77,7 +80,7 @@ atf は「対象リポジトリの自動解析」と「対話ヒアリング」�
 `generateTeam()` が対象リポジトリの `.claude/` 配下に一式を書き込む。処理順:
 
 1. **teamSize によるトリミング**: `preset.json` の `agents` 配列の先頭から `minimal: 3 / standard: 5 / full: ∞` 体を採用(配列は重要な順に並べる規約)
-2. **テンプレートのレンダリング**: 各 `agents/*.md` の `{{projectName}}` `{{languages}}` `{{frameworks}}` `{{phase}}` `{{focus}}` を profile / requirements の値で置換
+2. **テンプレートのレンダリング**: 各 `agents/*.md` の `{{projectName}}` `{{languages}}` `{{frameworks}}` `{{phase}}` `{{focus}}` `{{githubRepo}}` を profile / requirements の値で置換
 3. **指示の自動付与**: 全エージェント定義の末尾に 2 種類の指示を注入する
    - 実行記録指示(常時): 完了時に `.claude/atf-logs/runs.jsonl` へ JSON を 1 行追記する(ダッシュボードのフィードバックループの起点)
    - Issue 駆動指示(`requirements.issueDriven` 時のみ): Issue 起点でのみ着手する等の制約
@@ -102,7 +105,7 @@ atf は「対象リポジトリの自動解析」と「対話ヒアリング」�
 
 ```
 RepoProfile      自動解析の結果(path, languages, frameworks, hasCI, hasTests, ...)
-Requirements     ヒアリング結果(phase, focus[], teamSize, issueDriven?)
+Requirements     ヒアリング結果(phase, focus[], teamSize, issueDriven?, githubRepo?)
 Preset           preset.json + ロード時付与の id / dir
 ScoredPreset     { preset, score } — スコアリング結果
 TeamManifest     team.json の中身。導入したチームの構成(再生成の単一情報源)

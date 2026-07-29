@@ -14,6 +14,8 @@ export interface RepoProfile {
   hasTests: boolean;
   /** おおよそのソースファイル数 */
   fileCount: number;
+  /** git remote から検出した GitHub リポジトリ(owner/repo 形式、未検出なら undefined) */
+  githubRepo?: string;
 }
 
 /** ヒアリングで得た要件 */
@@ -26,6 +28,8 @@ export interface Requirements {
   teamSize: string;
   /** Issue 駆動開発にするか(true なら issue-manager をチームに追加し、全エージェントが Issue 起点で動く) */
   issueDriven?: boolean;
+  /** チームが使う GitHub リポジトリ(owner/repo 形式)。ヒアリングで必ず確認する(未設定なら undefined) */
+  githubRepo?: string;
 }
 
 /** プリセット定義(templates/presets/<id>/preset.json) */

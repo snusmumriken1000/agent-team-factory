@@ -130,6 +130,8 @@ export function analyzeRepo(repoPath: string): RepoProfile {
     existsSync(join(path, ".gitlab-ci.yml")) ||
     existsSync(join(path, ".circleci"));
 
+  const githubRepo = detectGithubRepo(path);
+
   const languages = [...langCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([lang]) => lang);
@@ -142,5 +144,24 @@ export function analyzeRepo(repoPath: string): RepoProfile {
     hasCI,
     hasTests,
     fileCount,
+    githubRepo,
   };
+}
+
+/**
+ * .git/config の remote URL から GitHub リポジトリ(owner/repo)を検出する。
+ * ヒアリングのデフォルト値に使うだけなので、検出できなくてもよい(undefined を返す)。
+ */
+function detectGithubRepo(repoPath: string): string | undefined {
+  const configPath = join(repoPath, ".git", "config");
+  if (!existsSync(configPath)) return undefined;
+  try {
+    const config = readFileSync(configPath, "utf8");
+    const m = config.match(
+      /url\s*=\s*(?:https?:\/\/|git@|ssh:\/\/git@)github\.com[:/]([\w.-]+\/[\w.-]+?)(?:\.git)?\s*$/m,
+    );
+    return m?.[1];
+  } catch {
+    return undefined;
+  }
 }

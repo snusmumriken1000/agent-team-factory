@@ -64,6 +64,19 @@ describe("generateTeam (Issue 駆動)", () => {
     }
   });
 
+  it("githubRepo が指定されていれば Issue 駆動指示に起票先リポジトリを明記する", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), {
+      ...requirements,
+      githubRepo: "octocat/hello-world",
+    });
+
+    for (const file of result.written) {
+      const content = readFileSync(join(result.agentsDir, file), "utf8");
+      expect(content).toContain("使用するリポジトリ: octocat/hello-world");
+      expect(content).toContain("-R octocat/hello-world");
+    }
+  });
+
   it("issueDriven でなければ issue-manager を追加しない", () => {
     const result = generateTeam(preset(), profileFor(repoDir), {
       ...requirements,

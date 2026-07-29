@@ -42,13 +42,13 @@ const runLogInstruction = (agentName: string) => `
 `;
 
 /** Issue 駆動開発が有効なとき、各エージェント定義に付与する指示 */
-const issueDrivenInstruction = `
+const issueDrivenInstruction = (githubRepo?: string) => `
 
 ## Issue 駆動開発
 
-このプロジェクトは Issue 駆動で開発する:
+このプロジェクトは Issue 駆動で開発する${githubRepo ? `(使用するリポジトリ: ${githubRepo})` : ""}:
 
-- 作業は必ず対応する GitHub Issue を起点に行い、Issue 番号(#123)を確認してから着手する
+- 作業は必ず対応する GitHub Issue を起点に行い、Issue 番号(#123)を確認してから着手する${githubRepo ? `\n- Issue の起票・参照は ${githubRepo} に対して行う(gh CLI では \`-R ${githubRepo}\` を指定)` : ""}
 - 対応する Issue がない作業を依頼されたら、先に issue-manager エージェントで Issue を起票することを提案する
 - 成果物の報告・コミットメッセージには Issue 番号を含める
 - 実行記録の JSON にも \`"issue": "#123"\` を含める
@@ -81,13 +81,16 @@ export function generateTeam(
     frameworks: profile.frameworks.join(", ") || "(未検出)",
     phase: requirements.phase,
     focus: requirements.focus.join(", "),
+    githubRepo: requirements.githubRepo ?? "(未設定)",
   };
 
   const limit = TEAM_SIZE_LIMIT[requirements.teamSize] ?? Infinity;
   const selected = preset.agents.slice(0, limit);
   const written: string[] = [];
   const teamAgents: TeamAgent[] = [];
-  const extraInstruction = requirements.issueDriven ? issueDrivenInstruction : "";
+  const extraInstruction = requirements.issueDriven
+    ? issueDrivenInstruction(requirements.githubRepo)
+    : "";
 
   const writeAgent = (agentFile: string, srcDir: string) => {
     const template = readFileSync(join(srcDir, agentFile), "utf8");

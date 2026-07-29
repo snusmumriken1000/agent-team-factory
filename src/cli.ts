@@ -52,10 +52,11 @@ program
     console.log(`\n対象: ${profile.name} (${profile.path})`);
     console.log(`  言語: ${profile.languages.join(", ") || "(未検出)"}`);
     console.log(`  フレームワーク: ${profile.frameworks.join(", ") || "(未検出)"}`);
-    console.log(`  CI: ${profile.hasCI ? "あり" : "なし"} / テスト: ${profile.hasTests ? "あり" : "なし"}\n`);
+    console.log(`  CI: ${profile.hasCI ? "あり" : "なし"} / テスト: ${profile.hasTests ? "あり" : "なし"}`);
+    console.log(`  GitHub: ${profile.githubRepo ?? "(未検出)"}\n`);
 
-    // 2. ヒアリング
-    const requirements = await hearRequirements();
+    // 2. ヒアリング(GitHub リポジトリは検出値をデフォルトに必ず確認する)
+    const requirements = await hearRequirements(profile.githubRepo);
 
     // 3. プリセット選定(スコア上位を提示して確定)
     const presets = loadPresets();

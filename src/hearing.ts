@@ -1,8 +1,11 @@
-import { select, checkbox, confirm } from "@inquirer/prompts";
+import { select, checkbox, confirm, input } from "@inquirer/prompts";
 import type { Requirements } from "./types.js";
 
-/** 対話ヒアリングで要件を収集する */
-export async function hearRequirements(): Promise<Requirements> {
+/**
+ * 対話ヒアリングで要件を収集する。
+ * @param detectedGithubRepo 対象リポジトリの git remote から検出した GitHub リポジトリ(デフォルト値として提示)
+ */
+export async function hearRequirements(detectedGithubRepo?: string): Promise<Requirements> {
   const phase = await select({
     message: "プロジェクトの開発フェーズは?",
     choices: [
@@ -34,11 +37,22 @@ export async function hearRequirements(): Promise<Requirements> {
     ],
   });
 
+  // 検出値があっても必ず確認する(検出はヒューリスティックであり、別リポジトリを使う場合もあるため)
+  const githubRepoInput = await input({
+    message: "使用する GitHub リポジトリは?(owner/repo 形式。使わない場合は空欄)",
+    default: detectedGithubRepo,
+    validate: (v) =>
+      v.trim() === "" ||
+      /^[\w.-]+\/[\w.-]+$/.test(v.trim()) ||
+      "owner/repo 形式で入力してください(例: octocat/hello-world)",
+  });
+  const githubRepo = githubRepoInput.trim() || undefined;
+
   const issueDriven = await confirm({
     message:
       "Issue 駆動で開発しますか?(GitHub Issues を起点にタスクを管理し、Issue マネージャーをチームに追加します)",
     default: true,
   });
 
-  return { phase, focus, teamSize, issueDriven };
+  return { phase, focus, teamSize, issueDriven, githubRepo };
 }
