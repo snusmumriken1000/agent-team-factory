@@ -48,6 +48,12 @@ Sleep 800ms
 Enter
 Sleep 1500ms
 
+# 使用する GitHub リポジトリ
+Type "snusmumriken1000/awesome-app"
+Sleep 600ms
+Enter
+Sleep 1500ms
+
 # Issue 駆動: はい(デフォルト)
 Enter
 Sleep 2s
