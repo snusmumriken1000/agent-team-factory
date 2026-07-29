@@ -56,18 +56,20 @@ function buildFlowChart(manifest: TeamManifest): string {
 }
 
 /** エージェントごとの実行記録テーブル行 */
-function buildRunRows(runs: RunRecord[]): string {
+function buildRunRows(runs: RunRecord[], issueDriven: boolean): string {
+  const columns = issueDriven ? 7 : 6;
   if (runs.length === 0) {
-    return `<tr><td colspan="6" class="empty">実行記録はまだありません(各エージェントが作業完了時に .claude/atf-logs/runs.jsonl へ追記します)</td></tr>`;
+    return `<tr><td colspan="${columns}" class="empty">実行記録はまだありません(各エージェントが作業完了時に .claude/atf-logs/runs.jsonl へ追記します)</td></tr>`;
   }
   return runs
     .slice()
     .sort((a, b) => (a.finishedAt ?? "").localeCompare(b.finishedAt ?? ""))
     .map((r) => {
       const status = r.status === "failure" ? "❌ failure" : "✅ " + (r.status ?? "success");
+      const issueCell = issueDriven ? `\n        <td>${escapeHtml(r.issue ?? "-")}</td>` : "";
       return `<tr>
         <td>${escapeHtml(r.finishedAt ?? "-")}</td>
-        <td><span class="badge">${escapeHtml(r.agent)}</span></td>
+        <td><span class="badge">${escapeHtml(r.agent)}</span></td>${issueCell}
         <td>${escapeHtml(r.task ?? "-")}</td>
         <td>${escapeHtml(r.inputs ?? "-")}</td>
         <td>${escapeHtml(r.outputs ?? "-")}</td>
@@ -98,6 +100,7 @@ function buildActivityBars(manifest: TeamManifest, runs: RunRecord[]): string {
 
 /** チーム構成 + 実行記録を可視化する自己完結 HTML を組み立てる */
 export function buildDashboardHtml(manifest: TeamManifest, runs: RunRecord[]): string {
+  const issueDriven = manifest.requirements.issueDriven ?? false;
   const agentCards = manifest.agents
     .map(
       (a) => `
@@ -141,6 +144,7 @@ export function buildDashboardHtml(manifest: TeamManifest, runs: RunRecord[]): s
   <span>プリセット: ${escapeHtml(manifest.preset)}</span>
   <span>フェーズ: ${escapeHtml(manifest.requirements.phase)}</span>
   <span>重視観点: ${escapeHtml(manifest.requirements.focus.join(", "))}</span>
+  <span>開発スタイル: ${issueDriven ? "Issue 駆動" : "通常"}</span>
   <span>実行記録: ${runs.length} 件</span>
 </p>
 
@@ -160,10 +164,10 @@ ${buildActivityBars(manifest, runs)}
 <h2>実行記録</h2>
 <table>
   <thead>
-    <tr><th>完了時刻</th><th>エージェント</th><th>タスク</th><th>入力</th><th>出力</th><th>結果</th></tr>
+    <tr><th>完了時刻</th><th>エージェント</th>${issueDriven ? "<th>Issue</th>" : ""}<th>タスク</th><th>入力</th><th>出力</th><th>結果</th></tr>
   </thead>
   <tbody>
-${buildRunRows(runs)}
+${buildRunRows(runs, issueDriven)}
   </tbody>
 </table>
 

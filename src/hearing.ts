@@ -1,4 +1,4 @@
-import { select, checkbox } from "@inquirer/prompts";
+import { select, checkbox, confirm } from "@inquirer/prompts";
 import type { Requirements } from "./types.js";
 
 /** 対話ヒアリングで要件を収集する */
@@ -34,5 +34,11 @@ export async function hearRequirements(): Promise<Requirements> {
     ],
   });
 
-  return { phase, focus, teamSize };
+  const issueDriven = await confirm({
+    message:
+      "Issue 駆動で開発しますか?(GitHub Issues を起点にタスクを管理し、Issue マネージャーをチームに追加します)",
+    default: true,
+  });
+
+  return { phase, focus, teamSize, issueDriven };
 }

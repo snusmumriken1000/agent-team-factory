@@ -10,6 +10,12 @@ export function presetsRoot(): string {
   return join(here, "..", "templates", "presets");
 }
 
+/** 全プリセット共通のエージェントテンプレート置き場(issue-manager など) */
+export function commonRoot(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return join(here, "..", "templates", "common");
+}
+
 /** すべてのプリセットをロードする */
 export function loadPresets(root: string = presetsRoot()): Preset[] {
   if (!existsSync(root)) return [];

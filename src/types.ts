@@ -24,6 +24,8 @@ export interface Requirements {
   focus: string[];
   /** チーム規模の希望: minimal | standard | full */
   teamSize: string;
+  /** Issue 駆動開発にするか(true なら issue-manager をチームに追加し、全エージェントが Issue 起点で動く) */
+  issueDriven?: boolean;
 }
 
 /** プリセット定義(templates/presets/<id>/preset.json) */
@@ -72,6 +74,8 @@ export interface RunRecord {
   outputs?: string;
   status?: string;
   finishedAt?: string;
+  /** Issue 駆動時の対応 Issue 番号(例: "#123") */
+  issue?: string;
 }
 
 /** プリセット選定結果 */

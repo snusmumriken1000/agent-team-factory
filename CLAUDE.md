@@ -30,14 +30,14 @@ hearing.ts  → Requirements ┘
 
 - `src/cli.ts` — commander によるエントリポイント(`analyze` / `list` / `generate` / `report`)
 - `src/analyzer.ts` — 対象リポジトリを走査し、言語(拡張子)・フレームワーク(package.json 依存 + マーカーファイル)・CI/テストの有無を検出して `RepoProfile` を作る
-- `src/hearing.ts` — @inquirer/prompts による対話ヒアリング(開発フェーズ・重視観点・チーム規模)→ `Requirements`
+- `src/hearing.ts` — @inquirer/prompts による対話ヒアリング(開発フェーズ・重視観点・チーム規模・Issue 駆動の有無)→ `Requirements`
 - `src/presets.ts` — `templates/presets/` からプリセットをロードし、profile/requirements との一致でスコアリング(focus 一致を最重視: +5、言語/FW: +2、フェーズ: +1。focus がスコアを支配するのは意図的 — ユーザーの明示要件 > 自動検出)
-- `src/generator.ts` — 選ばれたプリセットのエージェント定義を `{{placeholder}}` 置換して対象リポジトリの `.claude/agents/` に書き込み、`.claude/team.json` にマニフェスト(`TeamManifest`)を記録。各エージェント定義の末尾に「完了時に `.claude/atf-logs/runs.jsonl` へ実行記録を追記する」指示を自動付与する
+- `src/generator.ts` — 選ばれたプリセットのエージェント定義を `{{placeholder}}` 置換して対象リポジトリの `.claude/agents/` に書き込み、`.claude/team.json` にマニフェスト(`TeamManifest`)を記録。各エージェント定義の末尾に「完了時に `.claude/atf-logs/runs.jsonl` へ実行記録を追記する」指示を自動付与する。Issue 駆動(`requirements.issueDriven`)なら `templates/common/issue-manager.md` を teamSize の枠外で追加し、全エージェントに Issue 起点で動く指示を付与する
 - `src/report.ts` — `team.json` + `atf-logs/runs.jsonl` から自己完結 HTML ダッシュボード(`.claude/atf-dashboard.html`)を生成。チーム構成図は Mermaid(CDN)、実行記録はテーブル + 実行回数バーで可視化。エージェント由来の文字列は必ず `escapeHtml` を通すこと
 
 ## プリセットの追加方法
 
-`templates/presets/<id>/` に `preset.json` と `agents/*.md` を置くだけでコード変更なしで認識される。
+`templates/presets/<id>/` に `preset.json` と `agents/*.md` を置くだけでコード変更なしで認識される。全プリセット共通のエージェント(issue-manager など)は `templates/common/` に置く。
 
 - `preset.json`: `name` / `description` / `match`(スコアリング条件: languages, frameworks, focus, phase)/ `agents`(含めるエージェント定義のファイル名リスト。teamSize 制限で先頭から採用されるため重要な順に並べる)/ `flow`(ダッシュボードの構成図に描く from → to のエージェント名ペア)
 - ヒアリングの focus 選択肢(`src/hearing.ts`)に対応する値がないと、その focus を条件とするプリセットはヒアリング経由で選ばれない。新しい focus をプリセットに使うときは hearing.ts にも選択肢を追加すること

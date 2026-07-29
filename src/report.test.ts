@@ -33,6 +33,23 @@ describe("buildDashboardHtml", () => {
     expect(html).not.toContain("biz-evaluator");
   });
 
+  it("Issue 駆動のときだけ Issue 列を表示する", () => {
+    const runs: RunRecord[] = [
+      { agent: "market-researcher", task: "調査", issue: "#42", finishedAt: "2026-07-28T10:00:00Z" },
+    ];
+    const issueDriven = {
+      ...manifest,
+      requirements: { ...manifest.requirements, issueDriven: true },
+    };
+    const html = buildDashboardHtml(issueDriven, runs);
+    expect(html).toContain("<th>Issue</th>");
+    expect(html).toContain("#42");
+    expect(html).toContain("Issue 駆動");
+
+    const htmlWithout = buildDashboardHtml(manifest, runs);
+    expect(htmlWithout).not.toContain("<th>Issue</th>");
+  });
+
   it("実行記録をテーブルに反映し、HTML をエスケープする", () => {
     const runs: RunRecord[] = [
       {

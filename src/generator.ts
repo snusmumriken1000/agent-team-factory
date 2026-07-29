@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { commonRoot } from "./presets.js";
 import { buildDashboardHtml, loadRuns } from "./report.js";
 import type { Preset, RepoProfile, Requirements, TeamAgent, TeamManifest } from "./types.js";
 
@@ -40,6 +41,19 @@ const runLogInstruction = (agentName: string) => `
 失敗して終了する場合は status を "failure" にする。この記録はチームダッシュボード(.claude/atf-dashboard.html)の可視化に使われる。
 `;
 
+/** Issue 駆動開発が有効なとき、各エージェント定義に付与する指示 */
+const issueDrivenInstruction = `
+
+## Issue 駆動開発
+
+このプロジェクトは Issue 駆動で開発する:
+
+- 作業は必ず対応する GitHub Issue を起点に行い、Issue 番号(#123)を確認してから着手する
+- 対応する Issue がない作業を依頼されたら、先に issue-manager エージェントで Issue を起票することを提案する
+- 成果物の報告・コミットメッセージには Issue 番号を含める
+- 実行記録の JSON にも \`"issue": "#123"\` を含める
+`;
+
 export interface GenerateResult {
   agentsDir: string;
   written: string[];
@@ -73,18 +87,32 @@ export function generateTeam(
   const selected = preset.agents.slice(0, limit);
   const written: string[] = [];
   const teamAgents: TeamAgent[] = [];
+  const extraInstruction = requirements.issueDriven ? issueDrivenInstruction : "";
 
-  for (const agentFile of selected) {
-    const template = readFileSync(join(preset.dir, "agents", agentFile), "utf8");
+  const writeAgent = (agentFile: string, srcDir: string) => {
+    const template = readFileSync(join(srcDir, agentFile), "utf8");
     const meta = parseAgentMeta(template, agentFile.replace(/\.md$/, ""));
     teamAgents.push({ file: agentFile, ...meta });
 
     const dest = join(agentsDir, agentFile);
     if (existsSync(dest) && !opts.force) {
-      continue; // 既存のエージェント定義は尊重する
+      return; // 既存のエージェント定義は尊重する
     }
-    writeFileSync(dest, render(template, vars) + runLogInstruction(meta.name));
+    writeFileSync(dest, render(template, vars) + extraInstruction + runLogInstruction(meta.name));
     written.push(agentFile);
+  };
+
+  for (const agentFile of selected) {
+    writeAgent(agentFile, join(preset.dir, "agents"));
+  }
+
+  // Issue 駆動なら issue-manager を追加(teamSize の枠は消費しない)し、
+  // チームの先頭エージェントへタスクを流すフローを描く
+  const flow = [...(preset.flow ?? [])];
+  if (requirements.issueDriven) {
+    const firstAgent = teamAgents[0]?.name;
+    writeAgent("issue-manager.md", commonRoot());
+    if (firstAgent) flow.push(["issue-manager", firstAgent]);
   }
 
   // チームのマニフェストを記録(再生成・ダッシュボード生成の入力)
@@ -95,7 +123,7 @@ export function generateTeam(
     project: profile.name,
     requirements,
     agents: teamAgents,
-    flow: preset.flow ?? [],
+    flow,
   };
   writeFileSync(join(claudeDir, "team.json"), JSON.stringify(manifest, null, 2) + "\n");
 
