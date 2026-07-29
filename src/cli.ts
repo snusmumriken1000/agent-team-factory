@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { select, confirm } from "@inquirer/prompts";
 import { analyzeRepo } from "./analyzer.js";
 import { hearRequirements } from "./hearing.js";
-import { loadPresets, scorePresets } from "./presets.js";
+import { loadPresets, scorePresets, uncoveredFocus } from "./presets.js";
 import { generateTeam } from "./generator.js";
 import { buildDashboardHtml, loadRuns, loadTeamManifest } from "./report.js";
 import { writeFileSync } from "node:fs";
@@ -70,6 +70,22 @@ program
       console.error(`プリセットが見つかりません: ${opts.preset}`);
       process.exitCode = 1;
       return;
+    }
+
+    // 重視観点がどのプリセットにもカバーされない場合は、不適切なチームを
+    // 導入せず中断する(--preset での明示指定時はユーザーの判断を尊重して確認しない)
+    if (!opts.preset) {
+      const uncovered = uncoveredFocus(presets, requirements);
+      if (uncovered.length === requirements.focus.length) {
+        console.error(`\n選択された重視観点(${uncovered.join(", ")})に対応するチームテンプレートが用意されていません。`);
+        console.error("管理者に新しいテンプレート(プリセット)の作成を問い合わせてください。");
+        console.error("処理を中断しました(エージェントチームは導入されていません)。");
+        process.exitCode = 1;
+        return;
+      }
+      if (uncovered.length > 0) {
+        console.warn(`注意: 重視観点のうち ${uncovered.join(", ")} に対応するテンプレートはありません。他の観点に基づいてチームを提案します。`);
+      }
     }
     if (!preset) {
       const ranked = scorePresets(presets, profile, requirements);

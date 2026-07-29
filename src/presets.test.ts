@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadPresets, scorePresets } from "./presets.js";
+import { loadPresets, scorePresets, uncoveredFocus } from "./presets.js";
 import { render } from "./generator.js";
 import type { RepoProfile, Requirements } from "./types.js";
 
@@ -55,6 +55,33 @@ describe("scorePresets", () => {
     };
     const ranked = scorePresets(loadPresets(), profile, requirements);
     expect(ranked[0].preset.id).toBe("web-dev");
+  });
+});
+
+describe("uncoveredFocus", () => {
+  it("どのプリセットもカバーしない focus を返す", () => {
+    const requirements: Requirements = {
+      phase: "active",
+      focus: ["docs"], // 同梱プリセットに docs を match に持つものはない
+      teamSize: "standard",
+    };
+    expect(uncoveredFocus(loadPresets(), requirements)).toEqual(["docs"]);
+  });
+
+  it("カバーされている focus は返さない(部分カバーは未カバー分のみ)", () => {
+    const requirements: Requirements = {
+      phase: "active",
+      focus: ["quality", "docs"],
+      teamSize: "standard",
+    };
+    expect(uncoveredFocus(loadPresets(), requirements)).toEqual(["docs"]);
+
+    const covered: Requirements = {
+      phase: "active",
+      focus: ["quality", "security"],
+      teamSize: "standard",
+    };
+    expect(uncoveredFocus(loadPresets(), covered)).toEqual([]);
   });
 });
 

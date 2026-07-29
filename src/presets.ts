@@ -32,6 +32,17 @@ export function loadPresets(root: string = presetsRoot()): Preset[] {
 }
 
 /**
+ * どのプリセットにもカバーされていない重視観点(focus)を返す。
+ * 全 focus が未カバーなら、用意されているテンプレートでは要件に応えられない状態
+ * (呼び出し側で処理を中断し、管理者へのテンプレート作成依頼を促す)。
+ */
+export function uncoveredFocus(presets: Preset[], requirements: Requirements): string[] {
+  return requirements.focus.filter(
+    (f) => !presets.some((p) => p.match.focus?.includes(f)),
+  );
+}
+
+/**
  * プロファイルと要件に対してプリセットをスコアリングする。
  * match 条件との一致 1 件につき加点。focus の一致を最重視する。
  */
