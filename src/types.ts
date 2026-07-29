@@ -18,6 +18,34 @@ export interface RepoProfile {
   githubRepo?: string;
 }
 
+/** 新規開発(greenfield)時にヒアリングするインセプションデッキ(何を作るかの合意) */
+export interface InceptionDeck {
+  /** なぜ作るのか(背景・解決したい課題) */
+  purpose: string;
+  /** 誰のためのプロダクトか(対象ユーザー) */
+  targetUsers: string;
+  /** 中核となる価値(既存の代替手段との違い) */
+  coreValue: string;
+  /** 必ず実現すること(スコープ内) */
+  mustHave: string[];
+  /** やらないことリスト(スコープ外の明確化) */
+  notList: string[];
+  /** 成功の判断基準 */
+  successCriteria: string;
+  /** 夜も眠れない問題(最大の懸念・リスク。空欄可) */
+  risks: string;
+  /** トレードオフ時に最優先するもの */
+  tradeoffPriority: "quality" | "deadline" | "scope" | "cost";
+}
+
+/** tradeoffPriority → 表示用ラベル(生成物・ダッシュボードの両方で使う) */
+export const TRADEOFF_LABEL: Record<string, string> = {
+  quality: "品質(品質を落とさない)",
+  deadline: "期日(リリース時期を守る)",
+  scope: "スコープ(予定した機能を削らない)",
+  cost: "コスト(費用・工数を増やさない)",
+};
+
 /** ヒアリングで得た要件 */
 export interface Requirements {
   /** 開発フェーズ: greenfield | active | maintenance */
@@ -38,6 +66,8 @@ export interface Requirements {
    * - "pr-merge": PR のマージはユーザーが行う(未選択なら CI・レビュー確認後にエージェントが gh pr merge まで実行)
    */
   touchpoints?: string[];
+  /** インセプションデッキ(phase が greenfield のときにヒアリングで作成。何を作るかの合意事項) */
+  inception?: InceptionDeck;
 }
 
 /** プリセット定義(templates/presets/<id>/preset.json) */

@@ -143,6 +143,9 @@ program
     if (requirements.touchpoints && requirements.touchpoints.length > 0) {
       console.log(`人間のタッチポイント: ${requirements.touchpoints.join(", ")}`);
     }
+    if (result.inceptionDeckPath) {
+      console.log(`インセプションデッキ: ${result.inceptionDeckPath}`);
+    }
     console.log(`ダッシュボード: ${result.dashboardPath}(ブラウザで開くと構成図を確認できます)`);
   });
 

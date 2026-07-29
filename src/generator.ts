@@ -2,7 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { commonRoot } from "./presets.js";
 import { buildDashboardHtml, loadRuns, loadTaskDrafts } from "./report.js";
-import type { Preset, RepoProfile, Requirements, TeamAgent, TeamManifest } from "./types.js";
+import { TRADEOFF_LABEL } from "./types.js";
+import type { InceptionDeck, Preset, RepoProfile, Requirements, TeamAgent, TeamManifest } from "./types.js";
 
 /** teamSize → エージェント数の上限 */
 const TEAM_SIZE_LIMIT: Record<string, number> = {
@@ -76,10 +77,72 @@ ${mergeLines}
 `;
 };
 
+/** インセプションデッキの Markdown(.claude/inception-deck.md)を組み立てる */
+export function buildInceptionDeckMarkdown(projectName: string, deck: InceptionDeck): string {
+  const list = (items: string[]) => items.map((i) => `- ${i}`).join("\n");
+  return `# ${projectName} インセプションデッキ
+
+agent-team-factory のヒアリングから生成した「何を作るか」の合意事項。
+全エージェントはこの方向性に沿って作業すること。内容を変更したいときはユーザーと合意してから更新する。
+
+## なぜ作るのか(背景・課題)
+
+${deck.purpose}
+
+## 誰のためのものか(対象ユーザー)
+
+${deck.targetUsers}
+
+## 中核となる価値(エレベーターピッチ)
+
+${deck.targetUsers} のための「${projectName}」は、${deck.coreValue}
+
+## 必ず実現すること
+
+${list(deck.mustHave)}
+
+## やらないことリスト
+
+${list(deck.notList)}
+
+## 成功の判断基準
+
+${deck.successCriteria}
+
+## 夜も眠れない問題(リスク)
+
+${deck.risks || "(特になし)"}
+
+## トレードオフの最優先
+
+${TRADEOFF_LABEL[deck.tradeoffPriority] ?? deck.tradeoffPriority}
+`;
+}
+
+/** インセプションデッキがあるとき、各エージェント定義に付与する指示 */
+const inceptionInstruction = (deck: InceptionDeck) => `
+
+## プロダクトの方向性(インセプションデッキ)
+
+新規開発プロジェクトのため、以下の合意に沿って作業する(全文: \`.claude/inception-deck.md\`):
+
+- 目的: ${deck.purpose}
+- 対象ユーザー: ${deck.targetUsers}
+- 中核価値: ${deck.coreValue}
+- 必ず実現すること: ${deck.mustHave.join(" / ")}
+- やらないこと: ${deck.notList.join(" / ")}(該当する実装・提案はしない)
+- 成功基準: ${deck.successCriteria}
+- トレードオフの最優先: ${TRADEOFF_LABEL[deck.tradeoffPriority] ?? deck.tradeoffPriority}
+
+判断に迷ったらインセプションデッキに立ち返り、逸脱しそうな場合はユーザーに確認する。
+`;
+
 export interface GenerateResult {
   agentsDir: string;
   written: string[];
   dashboardPath: string;
+  /** インセプションデッキを書き出した場合のパス */
+  inceptionDeckPath?: string;
 }
 
 /**
@@ -112,6 +175,7 @@ export function generateTeam(
   const teamAgents: TeamAgent[] = [];
   const touchpoints = requirements.touchpoints ?? [];
   const extraInstruction =
+    (requirements.inception ? inceptionInstruction(requirements.inception) : "") +
     (requirements.issueDriven
       ? issueDrivenInstruction(requirements.githubRepo, touchpoints.includes("issue-approval"))
       : "") +
@@ -157,6 +221,16 @@ export function generateTeam(
   };
   writeFileSync(join(claudeDir, "team.json"), JSON.stringify(manifest, null, 2) + "\n");
 
+  // 新規開発の合意事項を、人間とエージェントが参照できる独立した文書にする
+  let inceptionDeckPath: string | undefined;
+  if (requirements.inception) {
+    inceptionDeckPath = join(claudeDir, "inception-deck.md");
+    writeFileSync(
+      inceptionDeckPath,
+      buildInceptionDeckMarkdown(profile.name, requirements.inception),
+    );
+  }
+
   // ダッシュボードを生成(既存の実行記録・タスクドラフトがあれば反映)
   const dashboardPath = join(claudeDir, "atf-dashboard.html");
   writeFileSync(
@@ -164,5 +238,5 @@ export function generateTeam(
     buildDashboardHtml(manifest, loadRuns(profile.path), loadTaskDrafts(profile.path)),
   );
 
-  return { agentsDir, written, dashboardPath };
+  return { agentsDir, written, dashboardPath, inceptionDeckPath };
 }

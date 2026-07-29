@@ -161,3 +161,51 @@ describe("generateTeam (PR フロー・タッチポイント)", () => {
     expect(manifest.requirements.touchpoints).toEqual(["pr-merge"]);
   });
 });
+
+describe("generateTeam (新規開発のインセプションデッキ)", () => {
+  const requirements: Requirements = {
+    phase: "greenfield",
+    focus: ["quality"],
+    teamSize: "minimal",
+    issueDriven: false,
+    inception: {
+      purpose: "手作業のチーム編成に時間がかかるため",
+      targetUsers: "開発チームのリーダー",
+      coreValue: "要件に合うエージェントチームを短時間で導入できる",
+      mustHave: ["リポジトリ解析", "対話ヒアリング"],
+      notList: ["実装タスクの自動着手"],
+      successCriteria: "初回導入を10分以内に完了できる",
+      risks: "要件の聞き漏らし",
+      tradeoffPriority: "quality",
+    },
+  };
+
+  it("回答内容を Markdown に書き出し、全エージェントに参照指示を付ける", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), requirements);
+
+    expect(result.inceptionDeckPath).toBe(join(repoDir, ".claude", "inception-deck.md"));
+    const deck = readFileSync(result.inceptionDeckPath!, "utf8");
+    expect(deck).toContain("# example インセプションデッキ");
+    expect(deck).toContain("- リポジトリ解析");
+    expect(deck).toContain("- 実装タスクの自動着手");
+    expect(deck).toContain("品質(品質を落とさない)");
+
+    for (const file of result.written) {
+      const content = readFileSync(join(result.agentsDir, file), "utf8");
+      expect(content).toContain("## プロダクトの方向性(インセプションデッキ)");
+      expect(content).toContain(".claude/inception-deck.md");
+      expect(content).toContain("実装タスクの自動着手");
+    }
+  });
+
+  it("既存プロジェクトではインセプションデッキを生成しない", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), {
+      phase: "active",
+      focus: ["quality"],
+      teamSize: "minimal",
+    });
+
+    expect(result.inceptionDeckPath).toBeUndefined();
+    expect(existsSync(join(repoDir, ".claude", "inception-deck.md"))).toBe(false);
+  });
+});

@@ -1,5 +1,70 @@
 import { select, checkbox, confirm, input } from "@inquirer/prompts";
-import type { Requirements } from "./types.js";
+import { TRADEOFF_LABEL } from "./types.js";
+import type { InceptionDeck, Requirements } from "./types.js";
+
+const required = (v: string) => v.trim() !== "" || "入力してください";
+
+/** カンマ(和文・欧文)区切りの入力をリストに分解する */
+const splitList = (v: string): string[] =>
+  v
+    .split(/[、,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+const requiredList = (v: string) => splitList(v).length > 0 || "1件以上入力してください";
+const tradeoffChoices: { name: string; value: InceptionDeck["tradeoffPriority"] }[] = [
+  { name: TRADEOFF_LABEL.quality, value: "quality" },
+  { name: TRADEOFF_LABEL.deadline, value: "deadline" },
+  { name: TRADEOFF_LABEL.scope, value: "scope" },
+  { name: TRADEOFF_LABEL.cost, value: "cost" },
+];
+
+/**
+ * インセプションデッキ(何を作るかの合意)をヒアリングする。
+ * 新規開発(greenfield)では作りたいものを明らかにする必要があるため、
+ * アジャイル初期のインセプションデッキに相当する内容を対話で収集する。
+ */
+export async function hearInception(): Promise<InceptionDeck> {
+  console.log("\n新規開発のため、インセプションデッキ(何を作るかの合意)をヒアリングします。");
+  console.log("回答は .claude/inception-deck.md に書き出され、全エージェントの作業指針になります。\n");
+
+  const purpose = await input({
+    message: "なぜ作るのですか?(背景・解決したい課題)",
+    validate: required,
+  });
+  const targetUsers = await input({
+    message: "誰のためのプロダクトですか?(対象ユーザー)",
+    validate: required,
+  });
+  const coreValue = await input({
+    message: "中核となる価値は?(既存の代替手段との違い)",
+    validate: required,
+  });
+  const mustHave = splitList(
+    await input({
+      message: "必ず実現することは?(カンマ区切りで複数可)",
+      validate: requiredList,
+    }),
+  );
+  const notList = splitList(
+    await input({
+      message: "やらないことリストは?(カンマ区切りで複数可。スコープ外を明確にします)",
+      validate: requiredList,
+    }),
+  );
+  const successCriteria = await input({
+    message: "成功をどう判断しますか?(成功基準)",
+    validate: required,
+  });
+  const risks = (
+    await input({ message: "いちばん心配なこと(リスク)は?(空欄可)" })
+  ).trim();
+  const tradeoffPriority = await select<InceptionDeck["tradeoffPriority"]>({
+    message: "トレードオフが必要になったとき、何を最優先しますか?",
+    choices: tradeoffChoices,
+  });
+
+  return { purpose, targetUsers, coreValue, mustHave, notList, successCriteria, risks, tradeoffPriority };
+}
 
 /**
  * 対話ヒアリングで要件を収集する。
@@ -14,6 +79,9 @@ export async function hearRequirements(detectedGithubRepo?: string): Promise<Req
       { name: "保守・運用(安定性が最優先)", value: "maintenance" },
     ],
   });
+
+  // 新規開発では何を作りたいかを明らかにする必要があるため、インセプションデッキを先に作る
+  const inception = phase === "greenfield" ? await hearInception() : undefined;
 
   const focus = await checkbox({
     message: "重視する観点を選んでください(複数可)",
@@ -67,7 +135,7 @@ export async function hearRequirements(detectedGithubRepo?: string): Promise<Req
     });
   }
 
-  return { phase, focus, teamSize, issueDriven, githubRepo, prFlow };
+  return { phase, focus, teamSize, issueDriven, githubRepo, prFlow, inception };
 }
 
 /**
