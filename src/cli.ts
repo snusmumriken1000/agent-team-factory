@@ -2,11 +2,11 @@
 import { Command } from "commander";
 import { select, confirm } from "@inquirer/prompts";
 import { analyzeRepo } from "./analyzer.js";
-import { hearRequirements } from "./hearing.js";
+import { hearRequirements, hearTouchpoints } from "./hearing.js";
 import { loadPresets, scorePresets, uncoveredFocus } from "./presets.js";
 import { generateTeam } from "./generator.js";
-import { buildDashboardHtml, loadRuns, loadTeamManifest } from "./report.js";
-import { writeFileSync } from "node:fs";
+import { buildDashboardHtml, buildFlowPreviewHtml, loadRuns, loadTaskDrafts, loadTeamManifest } from "./report.js";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const program = new Command();
@@ -99,7 +99,27 @@ program
       });
     }
 
-    // 4. 確認して導入
+    // 4. 開発フロープレビューを生成し、ユーザーに HTML の確認を促す
+    //    (開発フロー・ブランチ / Issue / PR がどのように作成されるか・重視観点を提示)
+    const claudeDir = join(profile.path, ".claude");
+    mkdirSync(claudeDir, { recursive: true });
+    const previewPath = join(claudeDir, "atf-flow-preview.html");
+    writeFileSync(previewPath, buildFlowPreviewHtml(preset, profile, requirements));
+    console.log(`\n開発フロープレビューを生成しました: ${previewPath}`);
+    console.log("ブラウザで開き、開発フロー(ブランチ・Issue・PR がどのように作成されるか)と重視観点を確認してください。");
+    const reviewed = await confirm({
+      message: "プレビューを確認しましたか?(続行すると人間のタッチポイントの選択に進みます)",
+      default: true,
+    });
+    if (!reviewed) {
+      console.log("中止しました(プレビューを確認してから再実行してください)。");
+      return;
+    }
+
+    // 5. 人間のタッチポイントをどこに設けるかを問い合わせる
+    requirements.touchpoints = await hearTouchpoints(requirements);
+
+    // 6. 確認して導入
     const ok = await confirm({
       message: `${preset.name} を ${profile.path}/.claude/agents/ に導入します。よろしいですか?`,
     });
@@ -115,6 +135,14 @@ program
       console.log(`\n導入完了: ${result.agentsDir}`);
       for (const f of result.written) console.log(`  + ${f}`);
     }
+    if (requirements.prFlow) {
+      console.log(
+        `PR フロー: 有効(マージ: ${requirements.touchpoints?.includes("pr-merge") ? "ユーザーが実行" : "エージェントが実行"})`,
+      );
+    }
+    if (requirements.touchpoints && requirements.touchpoints.length > 0) {
+      console.log(`人間のタッチポイント: ${requirements.touchpoints.join(", ")}`);
+    }
     console.log(`ダッシュボード: ${result.dashboardPath}(ブラウザで開くと構成図を確認できます)`);
   });
 
@@ -127,11 +155,12 @@ program
     const repoPath = resolve(repo);
     const manifest = loadTeamManifest(repoPath);
     const runs = loadRuns(repoPath);
+    const tasks = loadTaskDrafts(repoPath);
     const output = opts.output
       ? resolve(opts.output)
       : join(repoPath, ".claude", "atf-dashboard.html");
-    writeFileSync(output, buildDashboardHtml(manifest, runs));
-    console.log(`ダッシュボードを生成しました: ${output}(実行記録 ${runs.length} 件)`);
+    writeFileSync(output, buildDashboardHtml(manifest, runs, tasks));
+    console.log(`ダッシュボードを生成しました: ${output}(実行記録 ${runs.length} 件 / タスクドラフト ${tasks.length} 件)`);
   });
 
 program.parseAsync().catch((err) => {

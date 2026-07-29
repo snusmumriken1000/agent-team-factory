@@ -57,5 +57,43 @@ export async function hearRequirements(detectedGithubRepo?: string): Promise<Req
     default: true,
   });
 
-  return { phase, focus, teamSize, issueDriven, githubRepo };
+  // PR フローは GitHub リポジトリが設定されている場合のみ意味を持つ
+  let prFlow = false;
+  if (githubRepo) {
+    prFlow = await confirm({
+      message:
+        "ブランチ + Pull Request のフローを含めますか?(実装をブランチで行い、push して PR を作成・マージするまでを開発手順に組み込みます)",
+      default: true,
+    });
+  }
+
+  return { phase, focus, teamSize, issueDriven, githubRepo, prFlow };
+}
+
+/**
+ * 人間のタッチポイントをどこに設けるかを選択する。
+ * フロープレビュー HTML(.claude/atf-flow-preview.html)の確認を促した後に呼ぶこと。
+ * 選択なし = エージェントが最後まで自動で進める(PR マージも gh pr merge で実行)。
+ */
+export async function hearTouchpoints(requirements: Requirements): Promise<string[]> {
+  const choices: { name: string; value: string; checked?: boolean }[] = [];
+  if (requirements.issueDriven) {
+    choices.push({
+      name: "Issue 着手前(エージェントが起票した Issue をユーザーが確認・承認してから着手する)",
+      value: "issue-approval",
+    });
+  }
+  if (requirements.prFlow) {
+    choices.push({
+      name: "PR マージ(エージェントは PR 作成まで。マージはユーザーがレビューして実行する)",
+      value: "pr-merge",
+      checked: true,
+    });
+  }
+  if (choices.length === 0) return [];
+  return checkbox({
+    message:
+      "人間のタッチポイントをどこに設けますか?(選択なし = エージェントがマージまで自動で進めます)",
+    choices,
+  });
 }

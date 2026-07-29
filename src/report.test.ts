@@ -1,7 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { buildDashboardHtml } from "./report.js";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { buildDashboardHtml, buildFlowPreviewHtml, loadTaskDrafts } from "./report.js";
 import { parseAgentMeta } from "./generator.js";
-import type { RunRecord, TeamManifest } from "./types.js";
+import type { Preset, RepoProfile, Requirements, RunRecord, TaskDraft, TeamManifest } from "./types.js";
 
 const manifest: TeamManifest = {
   generatedBy: "agent-team-factory",
@@ -81,6 +84,39 @@ describe("buildDashboardHtml", () => {
     expect(htmlOn).toContain("Issue 起点のタスク供給");
   });
 
+  it("PR フローとタッチポイントを仕組みカードとメタ情報に反映する", () => {
+    const withPr = {
+      ...manifest,
+      requirements: {
+        ...manifest.requirements,
+        prFlow: true,
+        githubRepo: "octocat/hello-world",
+        touchpoints: ["pr-merge"],
+      },
+    };
+    const html = buildDashboardHtml(withPr, []);
+    expect(html).toContain("PR ベースの変更フロー");
+    expect(html).toContain("人間のタッチポイント");
+    expect(html).toContain("PR マージはユーザーが実行");
+    expect(html).toContain("あり(マージ: ユーザー)");
+    expect(html).not.toContain("未導入(PR フローを有効にすると追加)");
+
+    // pr-merge を選ばなければエージェントがマージする表示になる
+    const agentMerge = {
+      ...withPr,
+      requirements: { ...withPr.requirements, touchpoints: [] },
+    };
+    const htmlAgent = buildDashboardHtml(agentMerge, []);
+    expect(htmlAgent).toContain("あり(マージ: エージェント)");
+    expect(htmlAgent).toContain("エージェントがマージ");
+  });
+
+  it("PR フローが無効なら関連する仕組みを未導入として表示する", () => {
+    const html = buildDashboardHtml(manifest, []);
+    expect(html).toContain("未導入(PR フローを有効にすると追加)");
+    expect(html).toContain("PR フロー: なし");
+  });
+
   it("実行記録をテーブルに反映し、HTML をエスケープする", () => {
     const runs: RunRecord[] = [
       {
@@ -95,6 +131,120 @@ describe("buildDashboardHtml", () => {
     expect(html).toContain("競合比較表");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>alert(1)</script>");
+  });
+});
+
+describe("loadTaskDrafts", () => {
+  let repoDir: string;
+
+  beforeEach(() => {
+    repoDir = mkdtempSync(join(tmpdir(), "atf-report-test-"));
+  });
+
+  afterEach(() => {
+    rmSync(repoDir, { recursive: true, force: true });
+  });
+
+  const writeDraft = (file: string, content: string) => {
+    const dir = join(repoDir, ".claude", "atf-issues");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, file), content);
+  };
+
+  it("atf-issues がなければ空を返す", () => {
+    expect(loadTaskDrafts(repoDir)).toEqual([]);
+  });
+
+  it("タイトル・ref・依存(depends コメント)を抽出する", () => {
+    writeDraft("draft-01-scaffold.md", "# 足場を作る\n\n本文");
+    writeDraft("draft-02-app.md", "# アプリを作る\n\n本文\n\n<!-- depends: draft-01 -->");
+    const tasks = loadTaskDrafts(repoDir);
+    expect(tasks).toHaveLength(2);
+    expect(tasks[0]).toMatchObject({ ref: "draft-01", title: "足場を作る", dependsOn: [] });
+    expect(tasks[1]).toMatchObject({ ref: "draft-02", dependsOn: ["draft-01"] });
+  });
+
+  it("depends コメントがなければ本文中の他ドラフト参照を依存とみなす", () => {
+    writeDraft("draft-01-scaffold.md", "# 足場を作る\n\n本文");
+    writeDraft("draft-02-app.md", "# アプリを作る\n\n足場(draft-01)の上に実装する。");
+    const tasks = loadTaskDrafts(repoDir);
+    expect(tasks[1].dependsOn).toEqual(["draft-01"]);
+  });
+});
+
+describe("タスク依存関係セクション", () => {
+  const tasks: TaskDraft[] = [
+    { id: "draft-01-scaffold", ref: "draft-01", file: "draft-01-scaffold.md", title: "足場を作る", dependsOn: [] },
+    {
+      id: "draft-02-app",
+      ref: "draft-02",
+      file: "draft-02-app.md",
+      title: "<b>アプリ</b>を作る",
+      dependsOn: ["draft-01"],
+    },
+  ];
+
+  it("タスク依存グラフを Mermaid で描き、タイトルをエスケープする", () => {
+    const html = buildDashboardHtml(manifest, [], tasks);
+    expect(html).toContain("タスク依存関係");
+    expect(html).toContain("flowchart TD");
+    expect(html).toContain("draft-01-scaffold --> draft-02-app");
+    expect(html).toContain("&lt;b&gt;アプリ&lt;/b&gt;");
+    expect(html).not.toContain("<b>アプリ</b>");
+  });
+
+  it("タスクがなければ案内文を表示する", () => {
+    const html = buildDashboardHtml(manifest, []);
+    expect(html).toContain("タスクドラフトはまだありません");
+  });
+});
+
+describe("buildFlowPreviewHtml", () => {
+  const preset: Preset = {
+    id: "web-dev",
+    name: "Web アプリ開発チーム",
+    description: "",
+    match: {},
+    agents: ["architect.md", "implementer.md"],
+    flow: [["architect", "implementer"]],
+    dir: "/tmp/unused",
+  };
+  const profile: RepoProfile = {
+    path: "/tmp/unused",
+    name: "example",
+    languages: ["typescript"],
+    frameworks: [],
+    hasCI: false,
+    hasTests: false,
+    fileCount: 1,
+  };
+
+  it("重視観点・開発フロー・タッチポイント候補を提示する", () => {
+    const req: Requirements = {
+      phase: "active",
+      focus: ["speed"],
+      teamSize: "standard",
+      issueDriven: true,
+      githubRepo: "octocat/hello-world",
+      prFlow: true,
+    };
+    const html = buildFlowPreviewHtml(preset, profile, req);
+    expect(html).toContain("開発フロープレビュー");
+    expect(html).toContain("開発スピード"); // focus のラベル表示
+    expect(html).toContain("gh issue create -R octocat/hello-world"); // Issue の作られ方
+    expect(html).toContain("gh pr create -R octocat/hello-world"); // PR の作られ方
+    expect(html).toContain("feature/issue-"); // ブランチの作られ方
+    expect(html).toContain("タッチポイント候補");
+    expect(html).toContain("PR マージ");
+    expect(html).toContain("Issue 着手前");
+    expect(html).toContain('architect["architect"] --> implementer["implementer"]'); // チーム構成(予定)
+  });
+
+  it("Issue 駆動・PR フローが無効なら候補なしの案内を表示する", () => {
+    const req: Requirements = { phase: "active", focus: ["speed"], teamSize: "standard" };
+    const html = buildFlowPreviewHtml(preset, profile, req);
+    expect(html).toContain("選択できるタッチポイントはありません");
+    expect(html).toContain("PR フローは無効");
   });
 });
 
