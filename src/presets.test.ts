@@ -47,6 +47,27 @@ describe("scorePresets", () => {
     expect(ranked[0].preset.id).toBe("new-service");
   });
 
+  it("batch 重視なら batch-dev が最上位になる", () => {
+    const requirements: Requirements = {
+      phase: "active",
+      focus: ["batch"],
+      teamSize: "standard",
+    };
+    const javaProfile: RepoProfile = { ...profile, languages: ["java"], frameworks: [] };
+    const ranked = scorePresets(loadPresets(), javaProfile, requirements);
+    expect(ranked[0].preset.id).toBe("batch-dev");
+  });
+
+  it("docs 重視なら docs-team、mobile 重視なら mobile-dev、infra 重視なら infra-sre が最上位になる", () => {
+    const base: Requirements = { phase: "active", focus: [], teamSize: "standard" };
+    const top = (focus: string, p: RepoProfile = profile) =>
+      scorePresets(loadPresets(), p, { ...base, focus: [focus] })[0].preset.id;
+
+    expect(top("docs")).toBe("docs-team");
+    expect(top("mobile", { ...profile, languages: ["swift"], frameworks: [] })).toBe("mobile-dev");
+    expect(top("infra", { ...profile, languages: [], frameworks: ["docker"] })).toBe("infra-sre");
+  });
+
   it("TypeScript + react + speed 重視なら web-dev が最上位になる", () => {
     const requirements: Requirements = {
       phase: "active",
@@ -59,29 +80,34 @@ describe("scorePresets", () => {
 });
 
 describe("uncoveredFocus", () => {
+  // 同梱プリセットは全 focus をカバーしているため、未カバーの検証には架空の値を使う
   it("どのプリセットもカバーしない focus を返す", () => {
     const requirements: Requirements = {
       phase: "active",
-      focus: ["docs"], // 同梱プリセットに docs を match に持つものはない
+      focus: ["compliance"],
       teamSize: "standard",
     };
-    expect(uncoveredFocus(loadPresets(), requirements)).toEqual(["docs"]);
+    expect(uncoveredFocus(loadPresets(), requirements)).toEqual(["compliance"]);
   });
 
   it("カバーされている focus は返さない(部分カバーは未カバー分のみ)", () => {
     const requirements: Requirements = {
       phase: "active",
-      focus: ["quality", "docs"],
+      focus: ["quality", "compliance"],
       teamSize: "standard",
     };
-    expect(uncoveredFocus(loadPresets(), requirements)).toEqual(["docs"]);
+    expect(uncoveredFocus(loadPresets(), requirements)).toEqual(["compliance"]);
+  });
 
-    const covered: Requirements = {
+  it("ヒアリングの全 focus 選択肢がいずれかのプリセットにカバーされている", () => {
+    // hearing.ts の選択肢と同期していることの保証(未カバーの選択肢は generate 中断につながる)
+    const allChoices = ["quality", "security", "speed", "testing", "batch", "mobile", "infra", "docs", "planning"];
+    const requirements: Requirements = {
       phase: "active",
-      focus: ["quality", "security"],
+      focus: allChoices,
       teamSize: "standard",
     };
-    expect(uncoveredFocus(loadPresets(), covered)).toEqual([]);
+    expect(uncoveredFocus(loadPresets(), requirements)).toEqual([]);
   });
 });
 

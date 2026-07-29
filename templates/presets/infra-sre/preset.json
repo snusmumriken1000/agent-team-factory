@@ -1,0 +1,20 @@
+{
+  "name": "インフラ・SRE チーム",
+  "description": "IaC・CI/CD パイプライン・監視/アラート・インシデント対応を分担するインフラ運用チーム",
+  "match": {
+    "frameworks": ["docker"],
+    "focus": ["infra"],
+    "phase": ["active", "maintenance"]
+  },
+  "agents": [
+    "iac-engineer.md",
+    "cicd-engineer.md",
+    "monitoring-engineer.md",
+    "incident-responder.md"
+  ],
+  "flow": [
+    ["iac-engineer", "cicd-engineer"],
+    ["cicd-engineer", "monitoring-engineer"],
+    ["monitoring-engineer", "incident-responder"]
+  ]
+}

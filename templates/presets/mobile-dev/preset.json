@@ -1,0 +1,22 @@
+{
+  "name": "モバイルアプリ開発チーム",
+  "description": "UI 実装・プラットフォーム連携・実機検証・ストア申請を分担するモバイルアプリ開発チーム",
+  "match": {
+    "languages": ["swift", "kotlin", "typescript", "javascript"],
+    "focus": ["mobile"],
+    "phase": ["greenfield", "active"]
+  },
+  "agents": [
+    "mobile-architect.md",
+    "ui-implementer.md",
+    "platform-integrator.md",
+    "mobile-qa.md",
+    "release-manager.md"
+  ],
+  "flow": [
+    ["mobile-architect", "ui-implementer"],
+    ["ui-implementer", "platform-integrator"],
+    ["ui-implementer", "mobile-qa"],
+    ["mobile-qa", "release-manager"]
+  ]
+}

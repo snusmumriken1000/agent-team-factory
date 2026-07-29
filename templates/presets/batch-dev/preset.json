@@ -1,0 +1,22 @@
+{
+  "name": "バッチアプリ開発チーム",
+  "description": "ジョブ設計・実装・データ検証・運用監視を分担するバッチ処理特化の開発チーム",
+  "match": {
+    "languages": ["java", "kotlin", "python", "go", "csharp"],
+    "focus": ["batch"],
+    "phase": ["greenfield", "active", "maintenance"]
+  },
+  "agents": [
+    "batch-architect.md",
+    "batch-implementer.md",
+    "data-quality-engineer.md",
+    "ops-engineer.md",
+    "performance-tuner.md"
+  ],
+  "flow": [
+    ["batch-architect", "batch-implementer"],
+    ["batch-implementer", "data-quality-engineer"],
+    ["batch-implementer", "ops-engineer"],
+    ["batch-implementer", "performance-tuner"]
+  ]
+}

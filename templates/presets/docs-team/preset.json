@@ -1,0 +1,19 @@
+{
+  "name": "ドキュメント整備チーム",
+  "description": "既存ドキュメントの棚卸し・執筆・API リファレンス・チュートリアル整備を分担するドキュメント特化チーム",
+  "match": {
+    "focus": ["docs"],
+    "phase": ["active", "maintenance"]
+  },
+  "agents": [
+    "docs-auditor.md",
+    "docs-writer.md",
+    "api-doc-engineer.md",
+    "tutorial-writer.md"
+  ],
+  "flow": [
+    ["docs-auditor", "docs-writer"],
+    ["docs-auditor", "api-doc-engineer"],
+    ["docs-auditor", "tutorial-writer"]
+  ]
+}
