@@ -1,0 +1,17 @@
+{
+  "name": "セキュリティ監査チーム",
+  "description": "脆弱性の検出・依存関係の監査・修正提案に特化したチーム",
+  "match": {
+    "focus": ["security"],
+    "phase": ["active", "maintenance"]
+  },
+  "agents": [
+    "security-auditor.md",
+    "dependency-auditor.md",
+    "fix-implementer.md"
+  ],
+  "flow": [
+    ["security-auditor", "fix-implementer"],
+    ["dependency-auditor", "fix-implementer"]
+  ]
+}

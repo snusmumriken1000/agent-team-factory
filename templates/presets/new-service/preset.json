@@ -1,0 +1,22 @@
+{
+  "name": "新サービス検討チーム",
+  "description": "新規サービスの企画・市場調査・実現性検証・事業性評価を分担する検討チーム",
+  "match": {
+    "focus": ["planning"],
+    "phase": ["greenfield"]
+  },
+  "agents": [
+    "product-planner.md",
+    "market-researcher.md",
+    "tech-feasibility.md",
+    "ux-designer.md",
+    "biz-evaluator.md"
+  ],
+  "flow": [
+    ["market-researcher", "product-planner"],
+    ["market-researcher", "biz-evaluator"],
+    ["tech-feasibility", "product-planner"],
+    ["ux-designer", "product-planner"],
+    ["biz-evaluator", "product-planner"]
+  ]
+}

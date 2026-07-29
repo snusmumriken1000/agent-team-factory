@@ -1,0 +1,17 @@
+{
+  "name": "品質レビューチーム",
+  "description": "コード品質・テスト・保守性の改善に特化したレビューチーム",
+  "match": {
+    "focus": ["quality", "testing"],
+    "phase": ["active", "maintenance"]
+  },
+  "agents": [
+    "code-reviewer.md",
+    "test-engineer.md",
+    "refactoring-advisor.md"
+  ],
+  "flow": [
+    ["code-reviewer", "refactoring-advisor"],
+    ["refactoring-advisor", "test-engineer"]
+  ]
+}

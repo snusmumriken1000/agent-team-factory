@@ -1,0 +1,23 @@
+{
+  "name": "Web アプリ開発チーム",
+  "description": "設計・実装・テスト・レビューを分担する標準的な開発チーム",
+  "match": {
+    "languages": ["typescript", "javascript"],
+    "frameworks": ["react", "next", "vue", "nuxt", "svelte", "express", "fastify", "nest"],
+    "focus": ["speed", "quality"],
+    "phase": ["greenfield", "active"]
+  },
+  "agents": [
+    "architect.md",
+    "implementer.md",
+    "test-engineer.md",
+    "code-reviewer.md",
+    "doc-writer.md"
+  ],
+  "flow": [
+    ["architect", "implementer"],
+    ["implementer", "test-engineer"],
+    ["implementer", "code-reviewer"],
+    ["implementer", "doc-writer"]
+  ]
+}
