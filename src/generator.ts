@@ -119,6 +119,32 @@ ${TRADEOFF_LABEL[deck.tradeoffPriority] ?? deck.tradeoffPriority}
 `;
 }
 
+/** オーケストレーターにのみ付与する、タッチポイントでの一時停止指示 */
+const orchestratorTouchpointInstruction = (touchpoints: string[]) => {
+  const stops: string[] = [];
+  if (touchpoints.includes("issue-approval")) {
+    stops.push(
+      "- **Issue 承認**: Issue を起票したら内容をユーザーに提示して停止する。ユーザーの承認を得るまで実装エージェントに委譲しない",
+    );
+  }
+  if (touchpoints.includes("pr-merge")) {
+    stops.push(
+      "- **PR マージ**: PR の作成と URL の提示までで停止する。マージはユーザーが実行するため、マージの完了を確認してから次の作業に進む",
+    );
+  }
+  const body = stops.length
+    ? `このチームには人間のタッチポイントが設定されている。開発は自動で推進してよいが、以下の地点では**必ずループを一時停止し、ユーザーの承認を得てから**先に進むこと。承認の省略・先回りをしてはならない:
+
+${stops.join("\n")}`
+    : "このチームに人間のタッチポイントは設定されていない(エージェントがマージまで自動で進めてよい)。ただしスコープの変更・破壊的な操作・仕様の判断が必要になったときは停止してユーザーに確認する。";
+  return `
+
+## タッチポイント(一時停止してユーザー承認を仰ぐ)
+
+${body}
+`;
+};
+
 /** インセプションデッキがあるとき、各エージェント定義に付与する指示 */
 const inceptionInstruction = (deck: InceptionDeck) => `
 
@@ -183,7 +209,7 @@ export function generateTeam(
       ? prFlowInstruction(requirements.githubRepo, touchpoints.includes("pr-merge"))
       : "");
 
-  const writeAgent = (agentFile: string, srcDir: string) => {
+  const writeAgent = (agentFile: string, srcDir: string, extra = "") => {
     const template = readFileSync(join(srcDir, agentFile), "utf8");
     const meta = parseAgentMeta(template, agentFile.replace(/\.md$/, ""));
     teamAgents.push({ file: agentFile, ...meta });
@@ -192,7 +218,10 @@ export function generateTeam(
     if (existsSync(dest) && !opts.force) {
       return; // 既存のエージェント定義は尊重する
     }
-    writeFileSync(dest, render(template, vars) + extraInstruction + runLogInstruction(meta.name));
+    writeFileSync(
+      dest,
+      render(template, vars) + extraInstruction + extra + runLogInstruction(meta.name),
+    );
     written.push(agentFile);
   };
 
@@ -207,11 +236,17 @@ export function generateTeam(
   // Issue 駆動なら issue-manager を追加(teamSize の枠は消費しない)し、
   // チームの先頭エージェントへタスクを流すフローを描く
   const flow = [...(preset.flow ?? [])];
+  const firstAgent = teamAgents[0]?.name;
   if (requirements.issueDriven) {
-    const firstAgent = teamAgents[0]?.name;
     writeAgent("issue-manager.md", commonRoot());
     if (firstAgent) flow.push(["issue-manager", firstAgent]);
   }
+
+  // チーム全体をまとめ上げるオーケストレーターを全チーム共通で追加する(teamSize の枠外)。
+  // タッチポイントでの一時停止指示はオーケストレーターにのみ付与する
+  writeAgent("orchestrator.md", commonRoot(), orchestratorTouchpointInstruction(touchpoints));
+  const entryAgent = requirements.issueDriven ? "issue-manager" : firstAgent;
+  if (entryAgent) flow.push(["orchestrator", entryAgent]);
 
   // チームのマニフェストを記録(再生成・ダッシュボード生成の入力)
   const manifest: TeamManifest = {

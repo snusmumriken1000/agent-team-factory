@@ -47,13 +47,14 @@ describe("generateTeam (Issue 駆動)", () => {
     const manifest: TeamManifest = JSON.parse(
       readFileSync(join(repoDir, ".claude", "team.json"), "utf8"),
     );
-    // teamSize: minimal (3) の枠を消費せず追加される(env-builder は全チーム共通)
+    // teamSize: minimal (3) の枠を消費せず追加される(env-builder / orchestrator は全チーム共通)
     expect(manifest.agents.map((a) => a.name)).toEqual([
       "code-reviewer",
       "test-engineer",
       "refactoring-advisor",
       "env-builder",
       "issue-manager",
+      "orchestrator",
     ]);
     // issue-manager からチーム先頭エージェントへのフローが描かれる
     expect(manifest.flow).toContainEqual(["issue-manager", "code-reviewer"]);
@@ -110,6 +111,7 @@ describe("generateTeam (env-builder)", () => {
       "test-engineer",
       "refactoring-advisor",
       "env-builder",
+      "orchestrator",
     ]);
 
     const content = readFileSync(join(result.agentsDir, "env-builder.md"), "utf8");
@@ -119,6 +121,67 @@ describe("generateTeam (env-builder)", () => {
     // プレースホルダが置換され、実行記録の指示も付与される
     expect(content).toContain("example のエージェントチームの実行環境ビルダー");
     expect(content).toContain("## 実行記録");
+  });
+});
+
+describe("generateTeam (orchestrator)", () => {
+  const base: Requirements = {
+    phase: "active",
+    focus: ["quality"],
+    teamSize: "minimal",
+    issueDriven: true,
+    githubRepo: "octocat/hello-world",
+    prFlow: true,
+  };
+
+  it("全チーム共通で orchestrator を teamSize の枠外で追加し、入口へのフローを描く", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), base);
+
+    expect(result.written).toContain("orchestrator.md");
+    const manifest: TeamManifest = JSON.parse(
+      readFileSync(join(repoDir, ".claude", "team.json"), "utf8"),
+    );
+    // Issue 駆動なら orchestrator → issue-manager がタスクの入口になる
+    expect(manifest.flow).toContainEqual(["orchestrator", "issue-manager"]);
+
+    const content = readFileSync(join(result.agentsDir, "orchestrator.md"), "utf8");
+    expect(content).toContain("example の開発オーケストレーター");
+    expect(content).toContain("## 開発推進ループ");
+    expect(content).toContain("## 実行記録");
+  });
+
+  it("Issue 駆動でなければ orchestrator からチーム先頭エージェントへのフローを描く", () => {
+    generateTeam(preset(), profileFor(repoDir), { ...base, issueDriven: false });
+
+    const manifest: TeamManifest = JSON.parse(
+      readFileSync(join(repoDir, ".claude", "team.json"), "utf8"),
+    );
+    expect(manifest.flow).toContainEqual(["orchestrator", "code-reviewer"]);
+  });
+
+  it("タッチポイントが設定されていれば一時停止して承認を仰ぐ指示を付与する", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), {
+      ...base,
+      touchpoints: ["issue-approval", "pr-merge"],
+    });
+
+    const content = readFileSync(join(result.agentsDir, "orchestrator.md"), "utf8");
+    expect(content).toContain("## タッチポイント(一時停止してユーザー承認を仰ぐ)");
+    expect(content).toContain("必ずループを一時停止し、ユーザーの承認を得てから");
+    expect(content).toContain("**Issue 承認**");
+    expect(content).toContain("**PR マージ**");
+    // タッチポイントの一時停止指示は orchestrator 専用(他エージェントには付与しない)
+    const reviewer = readFileSync(join(result.agentsDir, "code-reviewer.md"), "utf8");
+    expect(reviewer).not.toContain("## タッチポイント(一時停止してユーザー承認を仰ぐ)");
+  });
+
+  it("タッチポイントなしなら自動で進めてよい旨の指示になる", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), { ...base, touchpoints: [] });
+
+    const content = readFileSync(join(result.agentsDir, "orchestrator.md"), "utf8");
+    expect(content).toContain("タッチポイントは設定されていない");
+    expect(content).not.toContain("**Issue 承認**");
+    expect(content).not.toContain("**PR マージ**");
   });
 });
 
