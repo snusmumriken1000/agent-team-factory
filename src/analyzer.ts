@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { basename, extname, join, resolve } from "node:path";
-import type { RepoProfile } from "./types.js";
+import type { RepoProfile, TechStack } from "./types.js";
 
 const EXT_TO_LANG: Record<string, string> = {
   ".ts": "typescript",
@@ -145,6 +145,19 @@ export function analyzeRepo(repoPath: string): RepoProfile {
     hasTests,
     fileCount,
     githubRepo,
+  };
+}
+
+/**
+ * ヒアリングで選択された技術スタックをプロファイルに統合する。
+ * 新規開発ではユーザーの選択が正であるため選択値を先頭に置き、検出値は後ろに残す
+ * (プリセットのスコアリングと {{languages}} / {{frameworks}} 置換の入力になる)。
+ */
+export function applyTechStack(profile: RepoProfile, stack: TechStack): RepoProfile {
+  return {
+    ...profile,
+    languages: [...new Set([...stack.languages, ...profile.languages])],
+    frameworks: [...new Set([...stack.frameworks, ...profile.frameworks])],
   };
 }
 

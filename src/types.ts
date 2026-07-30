@@ -46,6 +46,14 @@ export const TRADEOFF_LABEL: Record<string, string> = {
   cost: "コスト(費用・工数を増やさない)",
 };
 
+/** 新規開発(greenfield)時にヒアリングで選択する技術スタック */
+export interface TechStack {
+  /** 使用する言語(analyzer の検出値・プリセット match と同じ語彙。未定なら空) */
+  languages: string[];
+  /** 使用するフレームワーク・主要ツール(未定なら空) */
+  frameworks: string[];
+}
+
 /** ヒアリングで得た要件 */
 export interface Requirements {
   /** 開発フェーズ: greenfield | active | maintenance */
@@ -68,6 +76,8 @@ export interface Requirements {
   touchpoints?: string[];
   /** インセプションデッキ(phase が greenfield のときにヒアリングで作成。何を作るかの合意事項) */
   inception?: InceptionDeck;
+  /** 技術スタック(phase が greenfield のときにヒアリングで選択。cli.ts が applyTechStack でプロファイルに統合する) */
+  techStack?: TechStack;
 }
 
 /** プリセット定義(templates/presets/<id>/preset.json) */

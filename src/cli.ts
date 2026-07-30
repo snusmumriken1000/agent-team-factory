@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { select, confirm } from "@inquirer/prompts";
-import { analyzeRepo } from "./analyzer.js";
+import { analyzeRepo, applyTechStack } from "./analyzer.js";
 import { hearRequirements, hearTouchpoints } from "./hearing.js";
 import { loadPresets, scorePresets, uncoveredFocus } from "./presets.js";
 import { generateTeam } from "./generator.js";
@@ -48,15 +48,26 @@ program
   .option("-f, --force", "既存のエージェント定義を上書きする")
   .action(async (repo: string, opts: { preset?: string; force?: boolean }) => {
     // 1. 自動解析
-    const profile = analyzeRepo(repo);
+    let profile = analyzeRepo(repo);
     console.log(`\n対象: ${profile.name} (${profile.path})`);
     console.log(`  言語: ${profile.languages.join(", ") || "(未検出)"}`);
     console.log(`  フレームワーク: ${profile.frameworks.join(", ") || "(未検出)"}`);
     console.log(`  CI: ${profile.hasCI ? "あり" : "なし"} / テスト: ${profile.hasTests ? "あり" : "なし"}`);
     console.log(`  GitHub: ${profile.githubRepo ?? "(未検出)"}\n`);
 
-    // 2. ヒアリング(GitHub リポジトリは検出値をデフォルトに必ず確認する)
-    const requirements = await hearRequirements(profile.githubRepo);
+    // 2. ヒアリング(GitHub リポジトリは検出値をデフォルトに必ず確認する。
+    //    新規開発では技術スタックも選択させ、検出値を初期チェックとして提示する)
+    const requirements = await hearRequirements(profile.githubRepo, {
+      languages: profile.languages,
+      frameworks: profile.frameworks,
+    });
+    if (requirements.techStack) {
+      profile = applyTechStack(profile, requirements.techStack);
+      console.log(
+        `\n技術スタック: ${profile.languages.join(", ") || "(未定)"}` +
+          (profile.frameworks.length > 0 ? ` / ${profile.frameworks.join(", ")}` : ""),
+      );
+    }
 
     // 3. プリセット選定(スコア上位を提示して確定)
     const presets = loadPresets();

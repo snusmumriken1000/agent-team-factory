@@ -1,6 +1,6 @@
 import { select, checkbox, confirm, input } from "@inquirer/prompts";
 import { TRADEOFF_LABEL } from "./types.js";
-import type { InceptionDeck, Requirements } from "./types.js";
+import type { InceptionDeck, Requirements, TechStack } from "./types.js";
 
 const required = (v: string) => v.trim() !== "" || "入力してください";
 
@@ -67,10 +67,82 @@ export async function hearInception(): Promise<InceptionDeck> {
 }
 
 /**
+ * 技術スタックの選択肢。value は analyzer の検出値・プリセットの match 条件と
+ * 同じ語彙にすること(スコアリングと {{languages}} / {{frameworks}} 置換に使われるため)。
+ */
+const LANGUAGE_CHOICES: { name: string; value: string }[] = [
+  { name: "TypeScript", value: "typescript" },
+  { name: "JavaScript", value: "javascript" },
+  { name: "Python", value: "python" },
+  { name: "Go", value: "go" },
+  { name: "Java", value: "java" },
+  { name: "Kotlin", value: "kotlin" },
+  { name: "Swift", value: "swift" },
+  { name: "Ruby", value: "ruby" },
+  { name: "Rust", value: "rust" },
+  { name: "PHP", value: "php" },
+  { name: "C#", value: "csharp" },
+  { name: "C / C++", value: "cpp" },
+];
+const FRAMEWORK_CHOICES: { name: string; value: string }[] = [
+  { name: "React", value: "react" },
+  { name: "Next.js", value: "next" },
+  { name: "Vue", value: "vue" },
+  { name: "Nuxt", value: "nuxt" },
+  { name: "Svelte", value: "svelte" },
+  { name: "Express", value: "express" },
+  { name: "Fastify", value: "fastify" },
+  { name: "NestJS", value: "nest" },
+  { name: "Django", value: "django" },
+  { name: "Rails", value: "rails" },
+  { name: "Electron", value: "electron" },
+  { name: "Docker", value: "docker" },
+];
+
+/**
+ * 新規開発(greenfield)で使用する技術スタックを選択させる。
+ * 空リポジトリでは自動検出に頼れないため、ここでの選択がプリセットのスコアリングと
+ * エージェント定義の {{languages}} / {{frameworks}} 置換の入力になる。
+ * @param detected 自動検出できた言語・フレームワーク(初期チェックとして提示)
+ */
+export async function hearTechStack(
+  detected: TechStack = { languages: [], frameworks: [] },
+): Promise<TechStack> {
+  console.log("\n新規開発のため、使用する技術スタックを選択します(未定の項目は選択なしで進められます)。");
+
+  const languages = await checkbox({
+    message: "使用する言語は?(複数可・未定なら選択なし)",
+    choices: LANGUAGE_CHOICES.map((c) => ({ ...c, checked: detected.languages.includes(c.value) })),
+  });
+  const otherLanguages = splitList(
+    await input({ message: "選択肢にない言語があれば(カンマ区切り・なければ空欄)" }),
+  );
+
+  const frameworks = await checkbox({
+    message: "使用するフレームワーク・主要ツールは?(複数可・未定なら選択なし)",
+    choices: FRAMEWORK_CHOICES.map((c) => ({ ...c, checked: detected.frameworks.includes(c.value) })),
+  });
+  const otherFrameworks = splitList(
+    await input({ message: "選択肢にないフレームワークがあれば(カンマ区切り・なければ空欄)" }),
+  );
+
+  // 自由入力はプリセット match と照合できるよう小文字に正規化する
+  const normalize = (list: string[]) => list.map((s) => s.toLowerCase());
+  return {
+    languages: [...new Set([...languages, ...normalize(otherLanguages)])],
+    frameworks: [...new Set([...frameworks, ...normalize(otherFrameworks)])],
+  };
+}
+
+/**
  * 対話ヒアリングで要件を収集する。
  * @param detectedGithubRepo 対象リポジトリの git remote から検出した GitHub リポジトリ(デフォルト値として提示)
+ * @param detectedStack 自動検出できた技術スタック(greenfield の技術スタック選択で初期チェックとして提示)
  */
-export async function hearRequirements(detectedGithubRepo?: string): Promise<Requirements> {
+export async function hearRequirements(
+  detectedGithubRepo?: string,
+  detectedStack?: TechStack,
+): Promise<Requirements> {
   const phase = await select({
     message: "プロジェクトの開発フェーズは?",
     choices: [
@@ -82,6 +154,9 @@ export async function hearRequirements(detectedGithubRepo?: string): Promise<Req
 
   // 新規開発では何を作りたいかを明らかにする必要があるため、インセプションデッキを先に作る
   const inception = phase === "greenfield" ? await hearInception() : undefined;
+
+  // 新規開発では自動検出に頼れないため、技術スタックもヒアリングで選択する
+  const techStack = phase === "greenfield" ? await hearTechStack(detectedStack) : undefined;
 
   const focus = await checkbox({
     message: "重視する観点を選んでください(複数可)",
@@ -135,7 +210,7 @@ export async function hearRequirements(detectedGithubRepo?: string): Promise<Req
     });
   }
 
-  return { phase, focus, teamSize, issueDriven, githubRepo, prFlow, inception };
+  return { phase, focus, teamSize, issueDriven, githubRepo, prFlow, inception, techStack };
 }
 
 /**
