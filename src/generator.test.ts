@@ -47,11 +47,12 @@ describe("generateTeam (Issue 駆動)", () => {
     const manifest: TeamManifest = JSON.parse(
       readFileSync(join(repoDir, ".claude", "team.json"), "utf8"),
     );
-    // teamSize: minimal (3) の枠を消費せず 4 人目として追加される
+    // teamSize: minimal (3) の枠を消費せず追加される(env-builder は全チーム共通)
     expect(manifest.agents.map((a) => a.name)).toEqual([
       "code-reviewer",
       "test-engineer",
       "refactoring-advisor",
+      "env-builder",
       "issue-manager",
     ]);
     // issue-manager からチーム先頭エージェントへのフローが描かれる
@@ -87,6 +88,37 @@ describe("generateTeam (Issue 駆動)", () => {
     expect(existsSync(join(result.agentsDir, "issue-manager.md"))).toBe(false);
     const content = readFileSync(join(result.agentsDir, "code-reviewer.md"), "utf8");
     expect(content).not.toContain("## Issue 駆動開発");
+  });
+});
+
+describe("generateTeam (env-builder)", () => {
+  const requirements: Requirements = {
+    phase: "active",
+    focus: ["quality"],
+    teamSize: "minimal",
+  };
+
+  it("全チーム共通で env-builder を teamSize の枠外で追加する", () => {
+    const result = generateTeam(preset(), profileFor(repoDir), requirements);
+
+    expect(result.written).toContain("env-builder.md");
+    const manifest: TeamManifest = JSON.parse(
+      readFileSync(join(repoDir, ".claude", "team.json"), "utf8"),
+    );
+    expect(manifest.agents.map((a) => a.name)).toEqual([
+      "code-reviewer",
+      "test-engineer",
+      "refactoring-advisor",
+      "env-builder",
+    ]);
+
+    const content = readFileSync(join(result.agentsDir, "env-builder.md"), "utf8");
+    expect(content).toContain("ハーネス");
+    expect(content).toContain("ガードレール");
+    expect(content).toContain("フィードバックループ");
+    // プレースホルダが置換され、実行記録の指示も付与される
+    expect(content).toContain("example のエージェントチームの実行環境ビルダー");
+    expect(content).toContain("## 実行記録");
   });
 });
 

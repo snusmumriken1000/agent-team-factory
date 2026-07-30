@@ -200,6 +200,10 @@ export function generateTeam(
     writeAgent(agentFile, join(preset.dir, "agents"));
   }
 
+  // 実行環境(ハーネス・ガードレール・フィードバックループ)の整備役は
+  // 全チーム共通で追加する(teamSize の枠は消費しない)
+  writeAgent("env-builder.md", commonRoot());
+
   // Issue 駆動なら issue-manager を追加(teamSize の枠は消費しない)し、
   // チームの先頭エージェントへタスクを流すフローを描く
   const flow = [...(preset.flow ?? [])];
