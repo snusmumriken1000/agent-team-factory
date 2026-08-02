@@ -146,7 +146,11 @@ describe("generateTeam (orchestrator)", () => {
 
     const content = readFileSync(join(result.agentsDir, "orchestrator.md"), "utf8");
     expect(content).toContain("example の開発オーケストレーター");
-    expect(content).toContain("## 開発推進ループ");
+    expect(content).toContain("## 動作モード");
+    // 既定は立ち上げ期向けのブートストラップモード、もう一方が Issue 駆動モード
+    expect(content).toContain("既定はブートストラップモード");
+    expect(content).toContain("### ブートストラップモード(既定)");
+    expect(content).toContain("### Issue 駆動モード");
     expect(content).toContain("## 実行記録");
   });
 
