@@ -1,0 +1,183 @@
+{
+  "categories": [
+    {
+      "id": "languages",
+      "name": "言語",
+      "description": "実装に使うプログラミング言語",
+      "target": "languages",
+      "always": true,
+      "items": [
+        { "id": "typescript", "name": "TypeScript" },
+        { "id": "javascript", "name": "JavaScript" },
+        { "id": "python", "name": "Python" },
+        { "id": "go", "name": "Go" },
+        { "id": "java", "name": "Java" },
+        { "id": "kotlin", "name": "Kotlin" },
+        { "id": "scala", "name": "Scala" },
+        { "id": "swift", "name": "Swift" },
+        { "id": "ruby", "name": "Ruby" },
+        { "id": "rust", "name": "Rust" },
+        { "id": "php", "name": "PHP" },
+        { "id": "csharp", "name": "C#" },
+        { "id": "cpp", "name": "C / C++" },
+        { "id": "sql", "name": "SQL" }
+      ]
+    },
+    {
+      "id": "frameworks",
+      "name": "フレームワーク",
+      "description": "アプリケーションの土台になるフレームワーク",
+      "target": "frameworks",
+      "always": true,
+      "items": [
+        { "id": "react", "name": "React" },
+        { "id": "next", "name": "Next.js" },
+        { "id": "vue", "name": "Vue" },
+        { "id": "nuxt", "name": "Nuxt" },
+        { "id": "svelte", "name": "Svelte / SvelteKit" },
+        { "id": "express", "name": "Express" },
+        { "id": "fastify", "name": "Fastify" },
+        { "id": "nest", "name": "NestJS" },
+        { "id": "hono", "name": "Hono" },
+        { "id": "spring-boot", "name": "Spring Boot" },
+        { "id": "django", "name": "Django" },
+        { "id": "fastapi", "name": "FastAPI" },
+        { "id": "rails", "name": "Ruby on Rails" },
+        { "id": "laravel", "name": "Laravel" },
+        { "id": "dotnet", "name": ".NET" },
+        { "id": "flutter", "name": "Flutter" },
+        { "id": "react-native", "name": "React Native" },
+        { "id": "expo", "name": "Expo" },
+        { "id": "swiftui", "name": "SwiftUI" },
+        { "id": "electron", "name": "Electron" }
+      ]
+    },
+    {
+      "id": "database",
+      "name": "データベース・スキーマ管理",
+      "description": "DB 本体と、マイグレーション・ドキュメント生成などの周辺ツール",
+      "target": "frameworks",
+      "items": [
+        { "id": "postgres", "name": "PostgreSQL" },
+        { "id": "mysql", "name": "MySQL / MariaDB" },
+        { "id": "sqlite", "name": "SQLite" },
+        { "id": "sqlserver", "name": "SQL Server" },
+        { "id": "oracle", "name": "Oracle Database" },
+        { "id": "mongodb", "name": "MongoDB" },
+        { "id": "redis", "name": "Redis" },
+        { "id": "dynamodb", "name": "DynamoDB" },
+        { "id": "bigquery", "name": "BigQuery" },
+        { "id": "snowflake", "name": "Snowflake" },
+        { "id": "liquibase", "name": "Liquibase(マイグレーション)" },
+        { "id": "flyway", "name": "Flyway(マイグレーション)" },
+        { "id": "prisma", "name": "Prisma(ORM / マイグレーション)" },
+        { "id": "drizzle", "name": "Drizzle ORM" },
+        { "id": "typeorm", "name": "TypeORM" },
+        { "id": "sqlalchemy", "name": "SQLAlchemy + Alembic" },
+        { "id": "mybatis", "name": "MyBatis" },
+        { "id": "jpa", "name": "JPA / Hibernate" },
+        { "id": "activerecord", "name": "ActiveRecord" },
+        { "id": "dbt", "name": "dbt" },
+        { "id": "tbls", "name": "tbls(スキーマドキュメント生成)" },
+        { "id": "liam-erd", "name": "Liam ERD(ER 図生成)" },
+        { "id": "schemaspy", "name": "SchemaSpy(スキーマドキュメント生成)" },
+        { "id": "atlas", "name": "Atlas(スキーマ as code)" }
+      ]
+    },
+    {
+      "id": "testing",
+      "name": "テスト",
+      "description": "テストフレームワーク・E2E ツール",
+      "target": "frameworks",
+      "items": [
+        { "id": "vitest", "name": "Vitest" },
+        { "id": "jest", "name": "Jest" },
+        { "id": "playwright", "name": "Playwright" },
+        { "id": "cypress", "name": "Cypress" },
+        { "id": "testing-library", "name": "Testing Library" },
+        { "id": "storybook", "name": "Storybook" },
+        { "id": "junit", "name": "JUnit" },
+        { "id": "spock", "name": "Spock" },
+        { "id": "pytest", "name": "pytest" },
+        { "id": "go-test", "name": "go test / testify" },
+        { "id": "rspec", "name": "RSpec" },
+        { "id": "xctest", "name": "XCTest" },
+        { "id": "k6", "name": "k6(負荷試験)" },
+        { "id": "testcontainers", "name": "Testcontainers" }
+      ]
+    },
+    {
+      "id": "ci",
+      "name": "CI / CD",
+      "description": "ビルド・テスト・デプロイの自動化基盤",
+      "target": "frameworks",
+      "items": [
+        { "id": "github-actions", "name": "GitHub Actions" },
+        { "id": "gitlab-ci", "name": "GitLab CI" },
+        { "id": "circleci", "name": "CircleCI" },
+        { "id": "jenkins", "name": "Jenkins" },
+        { "id": "azure-pipelines", "name": "Azure Pipelines" },
+        { "id": "argocd", "name": "Argo CD" },
+        { "id": "renovate", "name": "Renovate / Dependabot" }
+      ]
+    },
+    {
+      "id": "infra",
+      "name": "インフラ・デプロイ",
+      "description": "実行環境とプロビジョニング",
+      "target": "frameworks",
+      "items": [
+        { "id": "docker", "name": "Docker" },
+        { "id": "kubernetes", "name": "Kubernetes" },
+        { "id": "terraform", "name": "Terraform" },
+        { "id": "pulumi", "name": "Pulumi" },
+        { "id": "aws-cdk", "name": "AWS CDK" },
+        { "id": "aws", "name": "AWS" },
+        { "id": "gcp", "name": "Google Cloud" },
+        { "id": "azure", "name": "Azure" },
+        { "id": "vercel", "name": "Vercel" },
+        { "id": "cloudflare", "name": "Cloudflare Workers / Pages" },
+        { "id": "supabase", "name": "Supabase" },
+        { "id": "firebase", "name": "Firebase" },
+        { "id": "ansible", "name": "Ansible" }
+      ]
+    },
+    {
+      "id": "observability",
+      "name": "監視・可観測性",
+      "description": "ログ・メトリクス・トレース・エラー追跡",
+      "target": "frameworks",
+      "items": [
+        { "id": "opentelemetry", "name": "OpenTelemetry" },
+        { "id": "datadog", "name": "Datadog" },
+        { "id": "new-relic", "name": "New Relic" },
+        { "id": "grafana", "name": "Grafana" },
+        { "id": "prometheus", "name": "Prometheus" },
+        { "id": "sentry", "name": "Sentry" },
+        { "id": "cloudwatch", "name": "CloudWatch" },
+        { "id": "elastic", "name": "Elastic Stack" }
+      ]
+    },
+    {
+      "id": "quality",
+      "name": "品質・静的解析",
+      "description": "フォーマッタ・リンタ・脆弱性検査",
+      "target": "frameworks",
+      "items": [
+        { "id": "eslint", "name": "ESLint" },
+        { "id": "biome", "name": "Biome" },
+        { "id": "prettier", "name": "Prettier" },
+        { "id": "ruff", "name": "Ruff" },
+        { "id": "mypy", "name": "mypy" },
+        { "id": "spotbugs", "name": "SpotBugs" },
+        { "id": "checkstyle", "name": "Checkstyle / Spotless" },
+        { "id": "golangci-lint", "name": "golangci-lint" },
+        { "id": "rubocop", "name": "RuboCop" },
+        { "id": "sonarqube", "name": "SonarQube" },
+        { "id": "codeql", "name": "CodeQL" },
+        { "id": "trivy", "name": "Trivy" },
+        { "id": "snyk", "name": "Snyk" }
+      ]
+    }
+  ]
+}
