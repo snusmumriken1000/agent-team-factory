@@ -4,7 +4,7 @@
   "match": {
     "languages": ["typescript", "javascript"],
     "frameworks": ["react", "next", "vue", "nuxt", "svelte", "express", "fastify", "nest"],
-    "focus": ["speed", "quality"],
+    "focus": ["speed", "quality", "design"],
     "phase": ["greenfield", "active"]
   },
   "agents": [

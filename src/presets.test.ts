@@ -80,6 +80,26 @@ describe("scorePresets", () => {
 });
 
 describe("uncoveredFocus", () => {
+  it("ヒアリングの focus 選択肢はすべてどれかのプリセットにカバーされている", () => {
+    // hearing.ts の選択肢と presets の match.focus がずれると、
+    // その観点を選んだユーザーの init が中断してしまう
+    const hearingFocus = [
+      "quality",
+      "security",
+      "speed",
+      "testing",
+      "batch",
+      "mobile",
+      "infra",
+      "docs",
+      "planning",
+      "design",
+    ];
+    expect(
+      uncoveredFocus(loadPresets(), { phase: "active", focus: hearingFocus, teamSize: "standard" }),
+    ).toEqual([]);
+  });
+
   // 同梱プリセットは全 focus をカバーしているため、未カバーの検証には架空の値を使う
   it("どのプリセットもカバーしない focus を返す", () => {
     const requirements: Requirements = {
@@ -100,7 +120,7 @@ describe("uncoveredFocus", () => {
   });
 
   it("ヒアリングの全 focus 選択肢がいずれかのプリセットにカバーされている", () => {
-    // hearing.ts の選択肢と同期していることの保証(未カバーの選択肢は generate 中断につながる)
+    // hearing.ts の選択肢と同期していることの保証(未カバーの選択肢は init 中断につながる)
     const allChoices = ["quality", "security", "speed", "testing", "batch", "mobile", "infra", "docs", "planning"];
     const requirements: Requirements = {
       phase: "active",

@@ -3,7 +3,7 @@
   "description": "UI 実装・プラットフォーム連携・実機検証・ストア申請を分担するモバイルアプリ開発チーム",
   "match": {
     "languages": ["swift", "kotlin", "typescript", "javascript"],
-    "focus": ["mobile"],
+    "focus": ["mobile", "design"],
     "phase": ["greenfield", "active"]
   },
   "agents": [

@@ -9,8 +9,8 @@ description: チームのサブエージェントをまとめ上げ、タスク�
 
 ## 最初にやること
 
-1. `.claude/team.json`(チームマニフェスト)を読み、チーム構成(agents)・タスクの流れ(flow)・requirements(issueDriven / prFlow / touchpoints)を把握する
-2. `.claude/inception-deck.md` があれば読み、プロダクトの方向性を把握する
+1. `atf-settings.yaml`(チーム設定)を読み、チーム構成(agents)・タスクの流れ(flow)・requirements(issueDriven / prFlow / touchpoints)を把握する
+2. 形式仕様モードなら `spec/main.als` のルートモジュール(`@title` / `@scope` / `@out-of-scope` / `@tradeoff`)を読み、何を作るのか・何を作らないのか・トレードオフの優先順位を把握する
 3. 実行環境が未整備(`.claude/atf-logs/runs.jsonl` がない、CLAUDE.md にチームセクションがない)なら、先に env-builder に整備を依頼する
 
 ## 動作モード
@@ -36,7 +36,7 @@ description: チームのサブエージェントをまとめ上げ、タスク�
 継続開発のためのモード。Issue を起点に次のループを繰り返す:
 
 1. **現状把握**: 未完了の作業(オープンな Issue・ユーザーの依頼・前回の続き)を確認し、次に進めるべき作業を選ぶ。対応する Issue がなければ issue-manager に起票を委譲する
-2. **委譲**: team.json の flow と各エージェントの役割に沿って、担当のサブエージェントに作業を委譲する。依頼には目的・入力・完了条件を明記する
+2. **委譲**: atf-settings.yaml の flow と各エージェントの役割に沿って、担当のサブエージェントに作業を委譲する。依頼には目的・入力・完了条件を明記する
 3. **検収**: 成果物を受け取り、完了条件を満たしているか確認する。不足があれば具体的な指摘とともに差し戻す
 4. **報告**: 完了した作業・次に進める作業を簡潔にユーザーに報告してから、次のループへ
 
