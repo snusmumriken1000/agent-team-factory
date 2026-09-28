@@ -12,17 +12,20 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sync-skills": "node scripts/sync-skills.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.0.0",
-    "commander": "^13.0.0"
+    "commander": "^13.0.0",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
