@@ -1,0 +1,80 @@
+{
+  "$comment": "同梱スキルの取得元。更新は scripts/sync-skills.mjs 経由で行い、SKILL.md は無改変で取り込む。",
+  "sources": [
+    {
+      "repo": "Leonxlnx/taste-skill",
+      "homepage": "https://github.com/Leonxlnx/taste-skill",
+      "ref": "ccbc15639c97057cbfcf32ecebc38ef716e4bb37",
+      "license": "MIT",
+      "licensePath": "LICENSE",
+      "skills": [
+        {
+          "id": "taste-skill",
+          "path": "skills/taste-skill/SKILL.md",
+          "category": "aesthetic",
+          "recommended": true
+        },
+        {
+          "id": "taste-skill-v1",
+          "path": "skills/taste-skill-v1/SKILL.md",
+          "category": "aesthetic"
+        },
+        {
+          "id": "minimalist-skill",
+          "path": "skills/minimalist-skill/SKILL.md",
+          "category": "aesthetic"
+        },
+        {
+          "id": "brutalist-skill",
+          "path": "skills/brutalist-skill/SKILL.md",
+          "category": "aesthetic"
+        },
+        {
+          "id": "soft-skill",
+          "path": "skills/soft-skill/SKILL.md",
+          "category": "aesthetic"
+        },
+        {
+          "id": "redesign-skill",
+          "path": "skills/redesign-skill/SKILL.md",
+          "category": "workflow"
+        },
+        {
+          "id": "output-skill",
+          "path": "skills/output-skill/SKILL.md",
+          "category": "workflow"
+        },
+        {
+          "id": "image-to-code-skill",
+          "path": "skills/image-to-code-skill/SKILL.md",
+          "category": "workflow"
+        },
+        {
+          "id": "gpt-tasteskill",
+          "path": "skills/gpt-tasteskill/SKILL.md",
+          "category": "workflow"
+        },
+        {
+          "id": "stitch-skill",
+          "path": "skills/stitch-skill/SKILL.md",
+          "category": "workflow"
+        },
+        {
+          "id": "imagegen-frontend-web",
+          "path": "skills/imagegen-frontend-web/SKILL.md",
+          "category": "imagegen"
+        },
+        {
+          "id": "imagegen-frontend-mobile",
+          "path": "skills/imagegen-frontend-mobile/SKILL.md",
+          "category": "imagegen"
+        },
+        {
+          "id": "brandkit",
+          "path": "skills/brandkit/SKILL.md",
+          "category": "imagegen"
+        }
+      ]
+    }
+  ]
+}

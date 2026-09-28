@@ -1,0 +1,12 @@
+{
+  "category": "diagram",
+  "source": {
+    "repo": "tt-a1i/archify",
+    "homepage": "https://github.com/tt-a1i/archify",
+    "path": "SKILL.md",
+    "version": "2.17.0-dev.1",
+    "license": "MIT",
+    "vendored": true,
+    "excluded": ["test/", "examples/*.html", "package-lock.json"]
+  }
+}
