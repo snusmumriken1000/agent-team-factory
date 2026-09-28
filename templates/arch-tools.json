@@ -1,0 +1,155 @@
+{
+  "$comment": "アーキテクチャ適合検証ツールのカタログ。languages は analyzer の検出値・tech-stack.json と同じ語彙に揃えること。recommended はその言語の既定の推奨で、言語ごとに 1 つだけにする(src/archtools.test.ts が検査する)。",
+  "tools": [
+    {
+      "id": "archunit",
+      "name": "ArchUnit",
+      "languages": ["java", "kotlin", "scala"],
+      "recommended": true,
+      "url": "https://www.archunit.org/",
+      "install": "Gradle: testImplementation \"com.tngtech.archunit:archunit-junit5:<最新版>\" / Maven: com.tngtech.archunit:archunit-junit5",
+      "config": "テストコード(src/test/java/**/ArchitectureTest.java。@AnalyzeClasses + @ArchTest)",
+      "run": "./gradlew test --tests '*ArchitectureTest*'",
+      "report": "@DisplayName(\"ARCH-01: ...\") でテスト名の先頭を規約 id にし、build/test-results/test/*.xml を report-junit.mjs に渡す",
+      "notes": "Maven なら mvn -Dtest='*ArchitectureTest*' test。バイトコードを解析するため Kotlin / Scala でも動くが、Scala の object・companion object のような言語固有の構造は素では検証できない(Kotlin 特化の検証は Konsist を併用する)"
+    },
+    {
+      "id": "konsist",
+      "name": "Konsist",
+      "languages": ["kotlin"],
+      "url": "https://docs.konsist.lemonappdev.com/",
+      "install": "Gradle: testImplementation \"com.lemonappdev:konsist:<最新版>\"",
+      "config": "テストコード(Kotlin の構文木を直接扱う)",
+      "run": "./gradlew test --tests '*KonsistTest*'",
+      "report": "テスト名の先頭を規約 id にし、build/test-results/test/*.xml を report-junit.mjs に渡す",
+      "notes": "data class・companion object・suspend など Kotlin 固有の構造を検証できる。ArchUnit の補完として使う"
+    },
+    {
+      "id": "archunit-ts",
+      "name": "ArchUnitTS",
+      "languages": ["typescript", "javascript"],
+      "recommended": true,
+      "url": "https://github.com/LukasNiessen/ArchUnitTS",
+      "install": "npm i -D archunit(パッケージ名は archunit)",
+      "config": "テストコード(src/**/*.arch.test.ts)。Vitest は vitest.config.ts に test.globals: true が必要(Jest は設定不要)",
+      "run": "npx vitest run --reporter=junit --outputFile=.arch/junit.xml '**/*.arch.test.ts'",
+      "report": "it('ARCH-01: ...') とテスト名の先頭を規約 id にし、出力した JUnit XML を report-junit.mjs に渡す",
+      "notes": "TypeScript コンパイラ API で解析するため、リポジトリルートの tsconfig.json が必要。JavaScript でも動くが解析精度は落ちる"
+    },
+    {
+      "id": "ts-arch",
+      "name": "ts-arch",
+      "languages": ["typescript", "javascript"],
+      "url": "https://github.com/ts-arch/ts-arch",
+      "install": "npm i -D tsarch",
+      "config": "テストコード(Jest 前提)。PlantUML で書いた図との照合もできる",
+      "run": "npx jest --reporters=default --reporters=jest-junit '.*arch.*'",
+      "report": "テスト名の先頭を規約 id にし、JUnit XML を report-junit.mjs に渡す",
+      "notes": "図(PlantUML)と実装の照合が要るとき以外は ArchUnitTS を優先する(更新頻度が低い)"
+    },
+    {
+      "id": "dependency-cruiser",
+      "name": "dependency-cruiser",
+      "languages": ["typescript", "javascript"],
+      "url": "https://github.com/sverweij/dependency-cruiser",
+      "install": "npm i -D dependency-cruiser",
+      "config": ".dependency-cruiser.js(forbidden の各ルールの name を規約 id にする)",
+      "run": "npx depcruise --config .dependency-cruiser.js --output-type json src > /tmp/dc.json",
+      "report": "ルール名 = 規約 id にしておき、JSON の summary.violations を規約ごとに数えて ARCH 行にする",
+      "notes": "テストを書かず設定だけで依存規約を書ける。循環依存の検出が強い。ArchUnitTS と併用してもよい"
+    },
+    {
+      "id": "eslint-plugin-boundaries",
+      "name": "eslint-plugin-boundaries",
+      "languages": ["typescript", "javascript"],
+      "url": "https://github.com/javierbrea/eslint-plugin-boundaries",
+      "install": "npm i -D eslint-plugin-boundaries",
+      "config": "ESLint の設定(要素の型とレイヤ間の許可・禁止)",
+      "run": "npx eslint --format json src > /tmp/eslint.json",
+      "report": "ルール設定を規約 id ごとに分け、違反件数を数えて ARCH 行にする",
+      "notes": "ESLint に乗るためエディタ上で違反が即わかる。規約の表現力は dependency-cruiser より低い"
+    },
+    {
+      "id": "archunitpython",
+      "name": "ArchUnitPython",
+      "languages": ["python"],
+      "recommended": true,
+      "url": "https://github.com/LukasNiessen/ArchUnitPython",
+      "install": "pip install archunitpython",
+      "config": "テストコード(tests/test_architecture.py。from archunitpython import project_files, assert_passes)",
+      "run": "pytest tests/test_architecture.py --junitxml=.arch/junit.xml",
+      "report": "def test_arch_01_domain_must_not_depend_on_infra() とテスト名に規約 id を含め(_ 区切りでよい)、JUnit XML を report-junit.mjs に渡す",
+      "notes": "標準ライブラリのみで動き、CLI を持たない(テストとして実行する)。循環依存・命名・メトリクスも検証できる"
+    },
+    {
+      "id": "import-linter",
+      "name": "import-linter",
+      "languages": ["python"],
+      "url": "https://import-linter.readthedocs.io/",
+      "install": "pip install import-linter",
+      "config": ".importlinter(contract の name を規約 id にする)",
+      "run": "lint-imports --config .importlinter",
+      "report": "contract 単位で結果が出るので、name を \"ARCH-01 ...\" にしておき出力行を PASS / VIOLATION に変換する",
+      "notes": "layers / forbidden / independence の contract で宣言的に書ける。テストを書きたくない場合の選択肢"
+    },
+    {
+      "id": "go-arch-lint",
+      "name": "go-arch-lint",
+      "languages": ["go"],
+      "recommended": true,
+      "url": "https://github.com/fe3dback/go-arch-lint",
+      "install": "go install github.com/fe3dback/go-arch-lint@latest",
+      "config": ".go-arch-lint.yml(components とその依存を宣言する)",
+      "run": "go-arch-lint check --json > /tmp/arch.json",
+      "report": "component 名を規約 id と対応づけておき、JSON の警告を規約ごとに数えて ARCH 行にする",
+      "notes": "違反があれば終了コード 1 を返すので、run-arch-check.sh では `|| true` を添えて出力を必ず出す。ArchUnit 系の Go 移植は実質存在しないため、import の向きを YAML で宣言するこのツールを使う。hexagonal / onion / DDD 向け"
+    },
+    {
+      "id": "depguard",
+      "name": "depguard",
+      "languages": ["go"],
+      "url": "https://github.com/OpenPeeDeeP/depguard",
+      "install": "golangci-lint に同梱(単体でも go install 可)",
+      "config": ".golangci.yml の linters-settings.depguard",
+      "run": "golangci-lint run --out-format json > /tmp/lint.json",
+      "report": "deny リストを規約ごとに分け、違反件数を数えて ARCH 行にする",
+      "notes": "既に golangci-lint を使っているなら追加コストが小さい。表現力はパッケージの許可・禁止に限られる"
+    },
+    {
+      "id": "deptrac",
+      "name": "deptrac",
+      "languages": ["php"],
+      "recommended": true,
+      "url": "https://github.com/qossmic/deptrac",
+      "install": "composer require --dev qossmic/deptrac",
+      "config": "deptrac.yaml(layers + ruleset)",
+      "run": "vendor/bin/deptrac analyse --formatter=json --output=/tmp/deptrac.json",
+      "report": "ruleset の違反を layer の組み合わせごとに数えて ARCH 行にする",
+      "notes": "レイヤ定義と許可リストを YAML で書く。ベースライン機能で既存違反を凍結できる"
+    },
+    {
+      "id": "packwerk",
+      "name": "packwerk",
+      "languages": ["ruby"],
+      "recommended": true,
+      "url": "https://github.com/Shopify/packwerk",
+      "install": "Gemfile に gem \"packwerk\"",
+      "config": "package.yml(パッケージ境界と依存の宣言)",
+      "run": "bin/packwerk check",
+      "report": "パッケージごとの違反件数を規約 id に対応づけて ARCH 行にする",
+      "notes": "Rails 向け。package_todo.yml が既存違反のベースラインになる"
+    },
+    {
+      "id": "netarchtest",
+      "name": "NetArchTest",
+      "languages": ["csharp"],
+      "recommended": true,
+      "url": "https://github.com/BenMorris/NetArchTest",
+      "install": "dotnet add package NetArchTest.Rules",
+      "config": "テストコード(ArchitectureTests.cs)",
+      "run": "dotnet test --logger \"trx;LogFileName=arch.trx\"",
+      "report": "テスト名の先頭を規約 id にし、trx を ARCH 行に変換する(または各テストで ARCH 行を直接出力する)",
+      "notes": "ArchUnit の .NET 版に相当する流暢な API を持つ"
+    }
+  ]
+}
