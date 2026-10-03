@@ -330,30 +330,78 @@ export function renderSpecExplainHtml(args: RenderExplainArgs): string {
         : `<span class="note">-</span>`,
   }));
 
-  const commandItems = model.commands.map((cmd) => {
-    const check = latestSpecCheck(checks, model.file, cmd.name);
-    return {
-      kind: escapeHtml(cmd.kind),
-      name: escapeHtml(cmd.name),
-      scope: escapeHtml(cmd.scope ?? ""),
-      requirement:
-        cmd.requirements.length > 0
-          ? cmd.requirements
-              .map(
-                (id) => `<b>${escapeHtml(id)}</b> ${escapeHtml(reqText.get(id) ?? "")}`,
-              )
-              .join("<br>")
-          : `<span class="note">(@req なし)</span>`,
-      meaning:
-        (cmd.kind === "check"
+  const latestCommandChecks: SpecCheckRecord[] = [];
+  const requirementIdOrder = new Intl.Collator("ja", { numeric: true, sensitivity: "base" });
+  const sortedCommandItems = model.commands
+    .map((cmd, sourceIndex) => {
+      const check = latestSpecCheck(checks, model.file, cmd.name);
+      if (check) latestCommandChecks.push(check);
+      const requirementIds = cmd.requirements.map((id) => escapeHtml(id));
+      const requirements = cmd.requirements.map((id) => escapeHtml(reqText.get(id) ?? ""));
+      const command = `<code>${escapeHtml(`${cmd.kind} ${cmd.name}`)}</code>${
+        cmd.scope ? ` <span class="note">${escapeHtml(cmd.scope)}</span>` : ""
+      }`;
+      const meaning =
+        cmd.kind === "check"
           ? "主張を破る例(反例)がないか"
-          : "条件を満たす例(インスタンス)があるか") +
-        (cmd.validation ? `<div class="note">${escapeHtml(cmd.validation)}</div>` : ""),
-      result: check ? chip(SPEC_RESULT_LABEL[check.result] ?? check.result, resultTone(check)) : chip("未検証"),
-      detail: escapeHtml(check?.detail ?? ""),
-      checkedAt: escapeHtml(check?.checkedAt ?? "-"),
+          : "条件を満たす例(インスタンス)があるか";
+      return {
+        requirementIds:
+          requirementIds.length > 0 ? requirementIds.join("<br>") : `<span class="note">-</span>`,
+        requirements:
+          requirements.length > 0 ? requirements.join("<br>") : `<span class="note">(@req なし)</span>`,
+        verification:
+          `${command}<div>${meaning}</div>` +
+          (cmd.validation ? `<div class="note">${escapeHtml(cmd.validation)}</div>` : ""),
+        result: check
+          ? chip(SPEC_RESULT_LABEL[check.result] ?? check.result, resultTone(check))
+          : chip("未検証"),
+        detail: escapeHtml(check?.detail ?? ""),
+        sortRequirementId: cmd.requirements[0],
+        sourceIndex,
+      };
+    })
+    .sort((a, b) => {
+      if (!a.sortRequirementId) return b.sortRequirementId ? 1 : a.sourceIndex - b.sourceIndex;
+      if (!b.sortRequirementId) return -1;
+      return (
+        requirementIdOrder.compare(a.sortRequirementId, b.sortRequirementId) ||
+        a.sourceIndex - b.sourceIndex
+      );
+    });
+  const commandItems = sortedCommandItems.map((item, index) => {
+    const previous = sortedCommandItems[index - 1];
+    const sameRequirement =
+      Boolean(item.sortRequirementId) &&
+      item.requirementIds === previous?.requirementIds &&
+      item.requirements === previous.requirements;
+    let rowspan = 1;
+    if (!sameRequirement && item.sortRequirementId) {
+      while (
+        sortedCommandItems[index + rowspan]?.requirementIds === item.requirementIds &&
+        sortedCommandItems[index + rowspan]?.requirements === item.requirements
+      ) {
+        rowspan++;
+      }
+    }
+    const rowspanAttribute = rowspan > 1 ? ` rowspan="${rowspan}"` : "";
+    return {
+      requirementIdCell: sameRequirement
+        ? ""
+        : `<td${rowspanAttribute}>${item.requirementIds}</td>`,
+      requirementCell: sameRequirement
+        ? ""
+        : `<td${rowspanAttribute}>${item.requirements}</td>`,
+      verification: item.verification,
+      result: item.result,
+      detail: item.detail,
     };
   });
+  const latestCheckedAt = latestCommandChecks
+    .map((check) => check.checkedAt)
+    .filter((checkedAt): checkedAt is string => Boolean(checkedAt))
+    .sort((a, b) => Date.parse(a) - Date.parse(b))
+    .at(-1);
 
   // 意図的に扱わない範囲(ルートモジュールの @out-of-scope)
   const outOfScopeItems = tagValues(model.doc, "out-of-scope").map((text) => ({
@@ -416,6 +464,7 @@ export function renderSpecExplainHtml(args: RenderExplainArgs): string {
     commandCount: String(model.commands.length),
     useCaseCount: String(useCases.length),
     gate: gateText,
+    latestCheckedAt: escapeHtml(latestCheckedAt ?? "未検証"),
     blocks: repeat(tpl, "block", blockItems),
     graph: repeat(tpl, "graph", graphItems),
     useCaseGraph: repeat(tpl, "useCaseGraph", useCaseGraphItems),

@@ -65,6 +65,14 @@ const CHECKS = [
     detail: "Counterexample found.",
     checkedAt: "2026-01-01T00:00:00Z",
   },
+  {
+    model: "order.als",
+    command: "Consistent",
+    kind: "run" as const,
+    result: "instance" as const,
+    detail: "Instance found.",
+    checkedAt: "2026-01-02T00:00:00Z",
+  },
 ];
 
 const DECISIONS = [
@@ -118,6 +126,9 @@ describe("parseExplainTemplate", () => {
     expect(explain).toContain("Alloy の記法の読み方");
     expect(explain).toContain("要件とコードを順に読む");
     expect(explain).toContain("{{blocks}}");
+    expect(explain).toContain('<details class="notation-guide">');
+    expect(explain).toContain("<summary>Alloy の記法の読み方</summary>");
+    expect(explain).not.toContain('<details class="notation-guide" open>');
     // 関係性グラフ・sig 一覧・反例から確定した仕様・モデル全文は載せない
     for (const gone of ["関係性グラフ", "{{graph}}", "{{sigs}}", "{{decisions}}", "{{source}}", "モデル全文"]) {
       expect(explain).not.toContain(gone);
@@ -198,6 +209,56 @@ describe("解説ページの生成(weave 経由)", () => {
     expect(html).toContain("Counterexample found.");
     expect(html).toContain("実装前ゲート");
     expect(html).toContain("未通過");
+  });
+
+  it("検証事項一覧は要件を分離し、コマンドを検証事項に含め、最新の検証時刻を表外に1件だけ載せる", () => {
+    const html = render();
+    const verify = html.slice(html.indexOf('id="panel-verify"'), html.indexOf('id="panel-explain"'));
+    expect(verify).toContain("<th>要件ID</th><th>要件</th><th>検証事項</th><th>最新の結果</th>");
+    expect(verify).not.toContain("対応する要件");
+    expect(verify).not.toContain("確かめていること");
+    expect(verify).not.toContain("<th>検証時刻</th>");
+    expect(verify).toContain("最終検証時刻: 2026-01-02T00:00:00Z");
+    expect(verify.match(/2026-01-02T00:00:00Z/g)).toHaveLength(1);
+    expect(verify).toContain("<td>R-01</td>");
+    expect(verify).toContain("<td>すべての注文はちょうど 1 人の顧客に属する</td>");
+    expect(verify).toContain("<td><code>check NoOrphanOrder</code>");
+  });
+
+  it("検証事項は要件IDの自然な昇順で並べ、要件IDなしは末尾に置く", () => {
+    writeFileSync(
+      join(specDir(dir), "order.als"),
+      `module order
+/** @req REQ-10 10番目 */
+run Ten {} for 3
+/** @req REQ-2 2番目 */
+run Two {} for 3
+run WithoutRequirement {} for 3
+`,
+    );
+    runWeave(dir, "demo");
+    const html = readFileSync(join(generatedDir(dir), "order.explain.html"), "utf8");
+    const verify = html.slice(html.indexOf('id="panel-verify"'), html.indexOf('id="panel-explain"'));
+    expect(verify.indexOf("REQ-2")).toBeLessThan(verify.indexOf("REQ-10"));
+    expect(verify.indexOf("REQ-10")).toBeLessThan(verify.indexOf("run WithoutRequirement"));
+  });
+
+  it("連続する同じ要件IDと要件は rowspan でセル結合する", () => {
+    writeFileSync(
+      join(specDir(dir), "order.als"),
+      `module order
+/** @req R-01 同じ要件 */
+run First {} for 3
+/** @req R-01 */
+run Second {} for 3
+`,
+    );
+    runWeave(dir, "demo");
+    const html = readFileSync(join(generatedDir(dir), "order.explain.html"), "utf8");
+    const verify = html.slice(html.indexOf('id="panel-verify"'), html.indexOf('id="panel-explain"'));
+    expect(verify).toContain('<td rowspan="2">R-01</td>');
+    expect(verify).toContain('<td rowspan="2">同じ要件</td>');
+    expect(verify.match(/>R-01<\/td>/g)).toHaveLength(1);
   });
 
   it("反例から確定した仕様は既定ページに出さない(ダッシュボードが担う)", () => {

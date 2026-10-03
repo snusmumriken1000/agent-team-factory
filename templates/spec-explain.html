@@ -23,12 +23,12 @@
   - `atf:block 名前-empty` は、その繰り返しが 0 件のときに 1 度だけ使われます
 
   使える `{{名前}}`:
-  - ページ全体: projectName / model / module / file / requirementCount / commandCount / useCaseCount / gate
+  - ページ全体: projectName / model / module / file / requirementCount / commandCount / useCaseCount / gate / latestCheckedAt
   - 繰り返しの差し込み口: useCaseGraph / actors / useCases / commands / outOfScope / blocks
   - useCaseGraph(ユースケース図。0 件か 1 件): source = Mermaid の記述
   - actor(アクター一覧): name / description / declaration
   - useCase(ユースケース一覧): actor / name / requirement / declaration
-  - command(検証事項): kind / name / scope / requirement / meaning / result / detail / checkedAt
+  - command(検証事項): requirementIdCell / requirementCell / verification / result / detail
   - outOfScope: text
   - block(Alloy コード解説): id / title / notes / code / commands
 
@@ -56,12 +56,12 @@
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   }
   * { box-sizing: border-box; }
-  body { max-width: 62rem; margin: 0 auto; padding: 5rem 2rem 7rem; background: var(--canvas); color: var(--ink); font-family: var(--sans); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; padding: 2rem 1.25rem 7rem; background: var(--canvas); color: var(--ink); font-family: var(--sans); line-height: 1.7; -webkit-font-smoothing: antialiased; }
   h1 { margin: 0; color: var(--ink-strong); font-size: clamp(1.7rem, 4vw, 2.3rem); font-weight: 600; letter-spacing: -.03em; line-height: 1.15; }
   h1::before { content: "FORMAL SPEC"; display: block; margin-bottom: .9rem; color: var(--muted); font-family: var(--mono); font-size: .7rem; letter-spacing: .18em; }
   h2 { margin: 3.4rem 0 1.2rem; padding-top: 1.7rem; border-top: 1px solid var(--line); color: var(--ink-strong); font-size: 1.05rem; font-weight: 600; }
   h3 { margin: 0 0 .5rem; color: var(--ink-strong); font-size: .95rem; font-weight: 600; }
-  .meta { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.5rem 0 0; color: var(--muted); font-size: .8rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: .4rem; margin: .7rem 0 0; color: var(--muted); font-size: .8rem; }
   .meta span { display: inline-flex; align-items: center; min-height: 1.9rem; padding: .18rem .7rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
   .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
   table { width: 100%; border-spacing: 0; font-size: .84rem; }
@@ -74,19 +74,22 @@
   ul { padding-left: 1.2rem; }
   li::marker { color: var(--faint); }
   .note { color: var(--muted); font-size: .82rem; }
+  .notation-guide { margin: 2.4rem 0 0; }
+  .notation-guide summary { color: var(--ink-strong); font-size: 1.05rem; font-weight: 600; cursor: pointer; }
+  .notation-guide[open] summary { margin-bottom: 1.2rem; }
   .empty { padding: 1.4rem; color: var(--faint); font-size: .84rem; text-align: center; }
   .chip { display: inline-flex; align-items: center; border-radius: 999px; padding: .12rem .62rem; background: var(--surface-alt); color: var(--muted); font-family: var(--mono); font-size: .73rem; letter-spacing: .03em; white-space: nowrap; }
   .chip-ok { background: var(--green-bg); color: var(--green-ink); box-shadow: inset 0 0 0 1px rgba(52,101,56,.25); }
   .chip-ng { background: var(--red-bg); color: var(--red-ink); box-shadow: inset 0 0 0 1px rgba(159,47,45,.25); }
   .chip-warn { background: var(--yellow-bg); color: var(--yellow-ink); box-shadow: inset 0 0 0 1px rgba(149,100,0,.25); }
-  .gate { margin: 1.8rem 0 0; border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1.1rem; background: var(--surface); font-size: .87rem; }
+  .gate { margin: .55rem 0 0; border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1.1rem; background: var(--surface); font-size: .87rem; }
   .gate-ok { border-color: rgba(52,101,56,.28); background: var(--green-bg); color: var(--green-ink); }
   .gate-ng { border-color: rgba(159,47,45,.28); background: var(--red-bg); color: var(--red-ink); }
   .gate-todo { border-color: rgba(149,100,0,.28); background: var(--yellow-bg); color: var(--yellow-ink); }
 
   /* タブ(ラジオボタン + CSS のみ。JavaScript なしで切り替わる) */
   .tab-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-  .tabs { display: flex; flex-wrap: wrap; gap: .3rem; margin: 2.6rem 0 0; border-bottom: 1px solid var(--line); }
+  .tabs { display: flex; flex-wrap: wrap; gap: .3rem; margin: 1.3rem 0 0; border-bottom: 1px solid var(--line); }
   .tabs label { margin-bottom: -1px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; padding: .55rem 1.1rem; color: var(--muted); font-size: .84rem; cursor: pointer; }
   .tabs label:hover { color: var(--ink); }
   .panel { display: none; }
@@ -99,7 +102,7 @@
   #tab-usecase:checked ~ #panel-usecase,
   #tab-verify:checked ~ #panel-verify,
   #tab-explain:checked ~ #panel-explain { display: block; }
-  .panel > h2:first-of-type { margin-top: 2.4rem; padding-top: 0; border-top: 0; }
+  .panel > h2:first-of-type { margin-top: 1.15rem; padding-top: 0; border-top: 0; }
 
   /* 文芸的プログラミング: 散文 → コードの繰り返し。左の罫線でひとまとまりを示す */
   .lit { margin: 0 0 1.6rem; border-left: 2px solid var(--line); padding: .2rem 0 .2rem 1.3rem; }
@@ -107,8 +110,7 @@
   .lit-prose { margin: .5rem 0 .9rem; font-size: .9rem; }
   .lit-cmds { margin-top: .6rem; display: flex; flex-wrap: wrap; gap: .35rem; }
   .mermaid { overflow-x: auto; margin: 0; border: 1px solid var(--line); border-radius: 12px; padding: 1.75rem; background: var(--surface); text-align: center; }
-  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--faint); font-size: .78rem; }
-  @media (max-width: 700px) { body { padding: 3rem 1.1rem 4.5rem; } .meta span { width: 100%; } .lit { padding-left: .9rem; } }
+  @media (max-width: 700px) { body { padding: 3rem 1.25rem 4.5rem; } .meta span { width: 100%; } .lit { padding-left: .9rem; } }
   @media print {
     body { max-width: none; padding: 0; background: #fff; }
     .tabs { display: none; }
@@ -119,13 +121,11 @@
 </head>
 <body>
 
-<h1>{{model}} の読み方</h1>
+<h1>{{model}}</h1>
 <div class="meta">
-  <span>{{projectName}}</span>
-  <span>module {{module}}</span>
   <span>ユースケース {{useCaseCount}} 件</span>
   <span>要件 {{requirementCount}} 件</span>
-  <span>検証コマンド {{commandCount}} 件</span>
+  <span>検証 {{commandCount}} 件</span>
 </div>
 {{gate}}
 
@@ -227,9 +227,10 @@
     <code>check</code>(<code>assert</code> の主張を反証で確かめる)と <code>run</code>(例の存在を確かめる)で、
     いま何を機械的に確かめているかの一覧です。
   </p>
+  <p class="note">最終検証時刻: {{latestCheckedAt}}</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>コマンド</th><th>対応する要件</th><th>確かめていること</th><th>最新の結果</th><th>検証時刻</th></tr></thead>
+      <thead><tr><th>要件ID</th><th>要件</th><th>検証事項</th><th>最新の結果</th></tr></thead>
       <tbody>
 {{commands}}
       </tbody>
@@ -238,24 +239,24 @@
 
 <!-- atf:block command -->
         <tr>
-          <td><code>{{kind}} {{name}}</code> <span class="note">{{scope}}</span></td>
-          <td>{{requirement}}</td>
-          <td>{{meaning}}</td>
+          {{requirementIdCell}}
+          {{requirementCell}}
+          <td>{{verification}}</td>
           <td>{{result}}<div class="note">{{detail}}</div></td>
-          <td class="note">{{checkedAt}}</td>
         </tr>
 <!-- /atf:block -->
 
 <!-- atf:block command-empty -->
-        <tr><td colspan="5" class="empty">名前付きの check / run がまだありません。</td></tr>
+        <tr><td colspan="4" class="empty">名前付きの check / run がまだありません。</td></tr>
 <!-- /atf:block -->
 
 </section>
 
 <section class="panel" id="panel-explain">
 
-  <h2>Alloy の記法の読み方</h2>
-  <div class="table-wrap">
+  <details class="notation-guide">
+    <summary>Alloy の記法の読み方</summary>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>記法</th><th>意味</th><th>読み替え</th></tr></thead>
       <tbody>
@@ -270,7 +271,8 @@
         <tr><td><code>all</code> / <code>no</code> / <code>some</code></td><td>量化子</td><td>「すべての〜」/「〜は存在しない」/「〜が存在する」</td></tr>
       </tbody>
     </table>
-  </div>
+    </div>
+  </details>
 
   <h2>要件とコードを順に読む</h2>
   <p class="note">上から順に読むと <code>{{model}}</code> 全体になります(散文は宣言の直上の doc comment、コードはその宣言)。</p>
@@ -291,11 +293,6 @@
 <!-- /atf:block -->
 
 </section>
-
-<footer>
-  GENERATED FROM spec/*.als — DO NOT EDIT。agent-team-factory(atf)が <code>{{file}}</code> から生成しました。
-  <code>bash atf-bin/weave.sh</code> で作り直せます。
-</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
