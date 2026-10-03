@@ -368,12 +368,95 @@ describe("applyFeatures(ルーブリック評価)", () => {
   });
 });
 
+describe("applyFeatures(エージェントログ可視化)", () => {
+  it("requirements.agentLog を有効にし、.claude/settings.json にログ転送の環境変数を配る", () => {
+    team();
+    const result = applyFeatures(repoDir, ["agent-log"]);
+
+    expect(manifest().requirements.agentLog).toBe(true);
+    const applied = result.applied[0];
+    expect(applied).toMatchObject({ id: "agent-log", alreadyEnabled: false });
+    // 担当エージェントは追加しない(配るのは設定だけ)
+    expect(applied.agentFile).toBeUndefined();
+    const settingsFile = join(repoDir, ".claude", "settings.json");
+    expect(applied.scaffoldDir).toBe(settingsFile);
+    const settings = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(settings.env.CLAUDE_CODE_ENABLE_TELEMETRY).toBe("1");
+    expect(settings.env.OTEL_LOGS_EXPORTER).toBe("otlp");
+    // Service 列でプロジェクトを見分けられるよう、atf-settings.yaml の project 名が入る
+    expect(settings.env.OTEL_SERVICE_NAME).toBe(manifest().project);
+    // 実行スクリプトは持たない(ゲートではなく設定配布の機能)
+    expect(existsSync(join(repoDir, "atf-bin", "agent-log.sh"))).toBe(false);
+  });
+
+  it("既存の settings.json の env を壊さずに足す", () => {
+    team();
+    mkdirSync(join(repoDir, ".claude"), { recursive: true });
+    writeFileSync(
+      join(repoDir, ".claude", "settings.json"),
+      JSON.stringify({ env: { OTEL_EXPORTER_OTLP_ENDPOINT: "http://collector:4317" } }),
+    );
+
+    applyFeatures(repoDir, ["agent-log"]);
+
+    const settings = JSON.parse(readFileSync(join(repoDir, ".claude", "settings.json"), "utf8"));
+    expect(settings.env.OTEL_EXPORTER_OTLP_ENDPOINT).toBe("http://collector:4317");
+    expect(settings.env.CLAUDE_CODE_ENABLE_TELEMETRY).toBe("1");
+  });
+});
+
+describe("applyFeatures(UI 指差し確認)", () => {
+  it("requirements.uiPointing を有効にし、.mcp.json に chrome-devtools MCP を配る", () => {
+    team();
+    const result = applyFeatures(repoDir, ["ui-pointing"]);
+
+    expect(manifest().requirements.uiPointing).toBe(true);
+    const applied = result.applied[0];
+    expect(applied).toMatchObject({ id: "ui-pointing", alreadyEnabled: false });
+    // 担当エージェントは追加しない(配るのは設定だけ)
+    expect(applied.agentFile).toBeUndefined();
+    const configFile = join(repoDir, ".mcp.json");
+    expect(applied.scaffoldDir).toBe(configFile);
+    const config = JSON.parse(readFileSync(configFile, "utf8"));
+    expect(config.mcpServers["chrome-devtools"]).toEqual({
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "chrome-devtools-mcp@latest"],
+    });
+    // 実行スクリプトは持たない(ゲートではなく設定配布の機能)
+    expect(existsSync(join(repoDir, "atf-bin", "ui-pointing.sh"))).toBe(false);
+  });
+
+  it("既存の .mcp.json の MCP サーバーを壊さずに足す", () => {
+    team();
+    writeFileSync(
+      join(repoDir, ".mcp.json"),
+      JSON.stringify({ mcpServers: { playwright: { type: "stdio", command: "npx", args: ["playwright-mcp"] } } }),
+    );
+
+    applyFeatures(repoDir, ["ui-pointing"]);
+
+    const config = JSON.parse(readFileSync(join(repoDir, ".mcp.json"), "utf8"));
+    expect(config.mcpServers.playwright.args).toEqual(["playwright-mcp"]);
+    expect(config.mcpServers["chrome-devtools"]).toBeDefined();
+  });
+});
+
 describe("enabledFeatures", () => {
   it("有効になっている機能だけを返す", () => {
     team({ archCheck: true });
 
     expect(enabledFeatures(manifest())).toEqual(["arch"]);
-    expect(FEATURE_IDS).toEqual(["formal", "arch", "docs", "issue", "eval", "report"]);
+    expect(FEATURE_IDS).toEqual([
+      "formal",
+      "arch",
+      "docs",
+      "issue",
+      "eval",
+      "agent-log",
+      "ui-pointing",
+      "report",
+    ]);
   });
 });
 

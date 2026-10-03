@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { AGENT_LOG_VIEWER_URL, agentLogStatus } from "./agentlog.js";
 import {
   archChecksPath,
   archDir,
@@ -24,6 +25,7 @@ import { adrDir, loadAdrs } from "./adr.js";
 import { lintFormal } from "./lint.js";
 import { planWeave } from "./weave.js";
 import { capabilitiesDir, isAdoptable, loadCapabilityFindings, loadCapabilityPlans } from "./capabilities.js";
+import { CHROME_DEVTOOLS_SERVER, uiPointingStatus } from "./mcp.js";
 import {
   evalDir,
   evalGateStatus,
@@ -662,6 +664,87 @@ function techStackFeature(manifest: TeamManifest): FeatureStatus {
   };
 }
 
+/** エージェントログ可視化(otel-desktop-viewer へのログ転送設定) */
+function agentLogFeature(repoPath: string, manifest: TeamManifest): FeatureStatus {
+  const enabled = manifest.requirements.agentLog ?? false;
+  const status = agentLogStatus(repoPath);
+  const details: string[] = [];
+  const issues: string[] = [];
+  if (!enabled) {
+    // 設定が丸ごと残っているときだけ知らせる(ユーザー自身の OTel 設定を疑わない)
+    if (status.missing.length === 0) {
+      issues.push(
+        `無効だがログ転送の設定が残っている(過去に有効だった可能性: ${status.path} の env)`,
+      );
+    }
+  } else {
+    details.push(`配布先: ${status.path}(env に OTel の環境変数)`);
+    details.push(
+      status.endpoint
+        ? `転送先: ${status.endpoint}(otel-desktop-viewer。閲覧は ${AGENT_LOG_VIEWER_URL})`
+        : "転送先(OTEL_EXPORTER_OTLP_ENDPOINT)が未設定",
+    );
+    details.push(
+      status.service
+        ? `Service 名: ${status.service}(ビューアの Service 列に出る)`
+        : "Service 名(OTEL_SERVICE_NAME)が未設定",
+    );
+    if (status.missing.length > 0) {
+      issues.push(
+        `有効だが ${status.missing.join(", ")} が ${status.path} にない(atf apply agent-log で配り直す)`,
+      );
+    }
+  }
+  return {
+    id: "agent-log",
+    name: "エージェントログ可視化",
+    enabled,
+    source: "requirements.agentLog",
+    details,
+    issues,
+    commands: enabled ? [`otel-desktop-viewer(閲覧は ${AGENT_LOG_VIEWER_URL})`] : [],
+    howToEnable: "atf apply agent-log <project-dir>",
+  };
+}
+
+/** UI 指差し確認(chrome-devtools MCP のサーバー定義の配布) */
+function uiPointingFeature(repoPath: string, manifest: TeamManifest): FeatureStatus {
+  const enabled = manifest.requirements.uiPointing ?? false;
+  const status = uiPointingStatus(repoPath);
+  const details: string[] = [];
+  const issues: string[] = [];
+  if (!enabled) {
+    // 設定が揃って残っているときだけ知らせる(ユーザー自身が足した MCP 設定を疑わない)
+    if (status.missing.length === 0) {
+      issues.push(
+        `無効だが ${CHROME_DEVTOOLS_SERVER} MCP の設定が残っている(過去に有効だった可能性: ${status.path})`,
+      );
+    }
+  } else {
+    details.push(`配布先: ${status.path}(mcpServers に ${CHROME_DEVTOOLS_SERVER})`);
+    details.push(
+      status.command
+        ? `起動コマンド: ${status.command}`
+        : `${CHROME_DEVTOOLS_SERVER} の起動コマンド(command)が未設定`,
+    );
+    if (status.missing.length > 0) {
+      issues.push(
+        `有効だが ${status.missing.join(", ")} が ${status.path} にない(atf apply ui-pointing で配り直す)`,
+      );
+    }
+  }
+  return {
+    id: "ui-pointing",
+    name: "UI 指差し確認",
+    enabled,
+    source: "requirements.uiPointing",
+    details,
+    issues,
+    commands: enabled ? ["Claude Code の /mcp(MCP サーバーの接続状況)"] : [],
+    howToEnable: "atf apply ui-pointing <project-dir>",
+  };
+}
+
 /**
  * 導入済みチームに「いま何が適用されているか」を集める(atf status の単一情報源)。
  *
@@ -683,6 +766,8 @@ export function collectProjectFeatures(
     archCheckFeature(repoPath, manifest),
     rubricEvalFeature(repoPath, manifest),
     capabilityScoutFeature(repoPath, manifest),
+    agentLogFeature(repoPath, manifest),
+    uiPointingFeature(repoPath, manifest),
     designSkillFeature(repoPath, manifest),
     techStackFeature(manifest),
   ];

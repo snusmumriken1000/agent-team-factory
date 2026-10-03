@@ -148,6 +148,19 @@ export interface Requirements {
    * そのエージェント定義から評価の指示が外れる。
    */
   evalTargets?: Record<string, boolean>;
+  /**
+   * エージェントログ可視化。true なら Claude Code の OpenTelemetry 出力を
+   * otel-desktop-viewer へ転送する環境変数を `.claude/settings.json` に配る
+   * (`atf apply agent-log`)。atf が配るのは設定だけで、
+   * otel-desktop-viewer の導入・起動は行わない。
+   */
+  agentLog?: boolean;
+  /**
+   * UI 指差し確認。true なら chrome-devtools MCP のサーバー定義を
+   * プロジェクト直下の `.mcp.json` に配る(`atf apply ui-pointing`)。
+   * atf が配るのは設定だけで、Chrome と MCP サーバーの用意は行わない。
+   */
+  uiPointing?: boolean;
   /** 技術スタック(ヒアリングでカテゴリごとに選択。cli.ts が applyTechStack でプロファイルに統合する) */
   techStack?: TechStack;
   /**

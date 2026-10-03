@@ -527,6 +527,15 @@ function indent(text: string): string {
     .join("\n");
 }
 
+/**
+ * 補足を括弧でくくる(中身が無ければ括弧も出さない)。
+ * 担当エージェントも実行スクリプトも持たない機能(設定を配るだけの agent-log / ui-pointing)で
+ * 空の括弧「()」がヘルプに残らないようにするため。
+ */
+function parenthesize(parts: string[]): string {
+  return parts.length === 0 ? "" : `(${parts.join(" / ")})`;
+}
+
 /** ヘルプに出すサブコマンドの一覧(機能テーブルから組み立てるので、機能を増やせば自動で載る) */
 const applyIds = [...featureSummaries().map((f) => f.id), "design"].join(" | ");
 const removeIds = [...REMOVABLE_FEATURES.map((f) => f.id), "design"].join(" | ");
@@ -542,10 +551,13 @@ for (const feature of featureSummaries()) {
     .command(feature.id)
     .argument("<project-dir>", "対象プロジェクトのディレクトリパス")
     .description(
-      `${feature.name}を導入する(${feature.agent ? `担当: ${feature.agent}` : ""}` +
-        (feature.agent && feature.hasScript ? " / " : "") +
-        (feature.hasScript ? `実行: bash atf-bin/${feature.id}.sh` : "") +
-        ")",
+      `${feature.name}を導入する` +
+        parenthesize(
+          [
+            feature.agent ? `担当: ${feature.agent}` : "",
+            feature.hasScript ? `実行: bash atf-bin/${feature.id}.sh` : "",
+          ].filter((part) => part !== ""),
+        ),
     )
     .option("-y, --yes", "確認プロンプトをスキップする");
   // 実行スクリプトを持たない機能(Issue 駆動)は走らせるものがないので --run を出さない

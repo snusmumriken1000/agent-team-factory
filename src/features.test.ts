@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { applyFeatures } from "./apply.js";
 import { collectProjectFeatures } from "./features.js";
 import { loadTeamSettings, saveTeamSettings, settingsPath } from "./settings.js";
 import { generateTeam } from "./generator.js";
@@ -74,6 +75,8 @@ describe("collectProjectFeatures(機能オフ)", () => {
       "arch-check",
       "rubric-eval",
       "capability-scout",
+      "agent-log",
+      "ui-pointing",
       "design-skills",
       "tech-stack",
     ]);
@@ -290,6 +293,66 @@ describe("collectProjectFeatures(ルーブリック評価)", () => {
     mkdirSync(join(repoDir, ".claude", "atf-eval"), { recursive: true });
     evaluation = feature(collectProjectFeatures(repoDir).features, "rubric-eval");
     expect(evaluation.issues.join("\n")).toContain("無効だが");
+  });
+});
+
+describe("collectProjectFeatures(エージェントログ可視化)", () => {
+  it("有効なら配布先と転送先を報告し、設定が配られていなければ要確認にする", () => {
+    generateTeam(preset(), profile(), { ...base, agentLog: true });
+
+    const before = feature(collectProjectFeatures(repoDir).features, "agent-log");
+    expect(before.enabled).toBe(true);
+    expect(before.issues.join("\n")).toContain("atf apply agent-log で配り直す");
+
+    applyFeatures(repoDir, ["agent-log"]);
+
+    const after = feature(collectProjectFeatures(repoDir).features, "agent-log");
+    expect(after.issues).toEqual([]);
+    expect(after.details.join("\n")).toContain(".claude/settings.json");
+    expect(after.details.join("\n")).toContain("http://localhost:4317");
+  });
+
+  it("無効なのにログ転送の設定が丸ごと残っていれば要確認として報告する", () => {
+    generateTeam(preset(), profile(), base);
+    applyFeatures(repoDir, ["agent-log"]);
+    // requirements だけを無効へ戻す(設定は残ったまま)
+    const manifest = loadTeamSettings(repoDir);
+    manifest.requirements.agentLog = false;
+    saveTeamSettings(repoDir, manifest);
+
+    const status = feature(collectProjectFeatures(repoDir).features, "agent-log");
+    expect(status.enabled).toBe(false);
+    expect(status.issues.join("\n")).toContain("無効だがログ転送の設定が残っている");
+  });
+});
+
+describe("collectProjectFeatures(UI 指差し確認)", () => {
+  it("有効なら配布先と起動コマンドを報告し、設定が配られていなければ要確認にする", () => {
+    generateTeam(preset(), profile(), { ...base, uiPointing: true });
+
+    const before = feature(collectProjectFeatures(repoDir).features, "ui-pointing");
+    expect(before.enabled).toBe(true);
+    expect(before.issues.join("\n")).toContain("atf apply ui-pointing で配り直す");
+
+    applyFeatures(repoDir, ["ui-pointing"]);
+
+    const after = feature(collectProjectFeatures(repoDir).features, "ui-pointing");
+    expect(after.issues).toEqual([]);
+    expect(after.details.join("\n")).toContain(".mcp.json");
+    expect(after.details.join("\n")).toContain("npx -y chrome-devtools-mcp@latest");
+  });
+
+  it("無効なのに chrome-devtools MCP の設定が残っていれば要確認として報告する", () => {
+    generateTeam(preset(), profile(), base);
+    applyFeatures(repoDir, ["ui-pointing"]);
+    // requirements だけを無効へ戻す(設定は残ったまま)
+    const manifest = loadTeamSettings(repoDir);
+    manifest.requirements.uiPointing = false;
+    saveTeamSettings(repoDir, manifest);
+
+    const status = feature(collectProjectFeatures(repoDir).features, "ui-pointing");
+    expect(status.enabled).toBe(false);
+    expect(status.issues.join("\n")).toContain("無効だが chrome-devtools MCP の設定が残っている");
   });
 });
 

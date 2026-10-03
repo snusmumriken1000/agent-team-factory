@@ -198,7 +198,15 @@ describe("removeFeatures", () => {
 
     const result = removeFeatures(repoDir, ["report", "arch"]);
 
-    expect(REMOVABLE_IDS).toEqual(["formal", "arch", "docs", "issue", "eval"]);
+    expect(REMOVABLE_IDS).toEqual([
+      "formal",
+      "arch",
+      "docs",
+      "issue",
+      "eval",
+      "agent-log",
+      "ui-pointing",
+    ]);
     expect(result.unknown).toEqual(["report"]);
     expect(result.removed.map((r) => r.id)).toEqual(["arch"]);
   });

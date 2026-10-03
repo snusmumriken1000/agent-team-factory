@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { AGENT_LOG_ENDPOINT, AGENT_LOG_VIEWER_URL, agentLogReady, writeAgentLogSettings } from "./agentlog.js";
 import { analyzeRepo, applyTechStack } from "./analyzer.js";
 import { archDir, archReportJunitPath, isArchRunnerTemplate, loadArchRules } from "./arch.js";
 import { atfBinDir, hasBinScript, installAtfBin, runBinScript } from "./bin.js";
@@ -62,13 +63,22 @@ import { bundledExplainTemplate } from "./specdoc.js";
 import { adrDir } from "./adr.js";
 import { generatedDir } from "./weave.js";
 import { loadCapabilityFindings, loadCapabilityPlans } from "./capabilities.js";
+import { CHROME_DEVTOOLS_SERVER, uiPointingReady, writeUiPointingMcp } from "./mcp.js";
 import { sectionHeading, spliceSections } from "./sections.js";
 import { loadTeamSettings, settingsPath, updateTeamSettings } from "./settings.js";
 import { installSkills } from "./skills.js";
 import type { InstalledSkill, Requirements, TeamManifest } from "./types.js";
 
 /** `atf apply <機能> <project-dir>` で導入できる機能の id(atf-bin に置かれるスクリプト名と揃える) */
-export type FeatureId = "formal" | "arch" | "docs" | "issue" | "eval" | "report";
+export type FeatureId =
+  | "formal"
+  | "arch"
+  | "docs"
+  | "issue"
+  | "eval"
+  | "agent-log"
+  | "ui-pointing"
+  | "report";
 
 /**
  * atf が内容を決めるファイル(`atf update` が最新の内容に入れ替える対象)。
@@ -94,7 +104,14 @@ export interface FeatureDef {
    * atf-settings.yaml の requirements 上のキー(有効/無効の単一情報源)。
    * 常に使える機能(ダッシュボードなど)は持たない
    */
-  flag?: "formalSpec" | "archCheck" | "reverseDocs" | "issueDriven" | "rubricEval";
+  flag?:
+    | "formalSpec"
+    | "archCheck"
+    | "reverseDocs"
+    | "issueDriven"
+    | "rubricEval"
+    | "agentLog"
+    | "uiPointing";
   /** 機能を担当する共通エージェント定義(templates/common)。担当を持たない機能は undefined */
   agentFile?: string;
   /** 併せて配るスキルのカタログ id */
@@ -281,6 +298,44 @@ export const FEATURES: FeatureDef[] = [
       },
     ],
     artifacts: (repoPath) => [evalDir(repoPath)],
+  },
+  {
+    id: "agent-log",
+    name: "エージェントログ可視化(otel-desktop-viewer へのログ転送)",
+    flag: "agentLog",
+    // 担当エージェントを持たない。配るのは .claude/settings.json の環境変数だけで、
+    // otel-desktop-viewer の導入・起動はユーザー(または env-builder)が行う
+    skills: [],
+    next:
+      "otel-desktop-viewer を起動し(受け口は " +
+      AGENT_LOG_ENDPOINT +
+      ")、Claude Code を起動し直すとログが転送されます。閲覧は " +
+      AGENT_LOG_VIEWER_URL +
+      " 。",
+    // 設定が env に揃っていれば整備済み(値の中身までは判定しない)
+    ready: (repoPath) => agentLogReady(repoPath),
+    // OTEL_SERVICE_NAME にプロジェクト名を入れる(ビューアの Service 列で見分けるため)
+    scaffold: (repoPath, manifest) => writeAgentLogSettings(repoPath, manifest.project),
+    // .claude/settings.json はユーザーも書くファイルなので managed に入れない
+    // (update で全文上書きすると env 以外の設定が消える)。撤去時も残す(artifacts なし)
+  },
+  {
+    id: "ui-pointing",
+    name: "UI 指差し確認(chrome-devtools MCP の配布)",
+    flag: "uiPointing",
+    // 担当エージェントを持たない。配るのは .mcp.json の MCP サーバー定義だけで、
+    // Chrome と MCP サーバーの用意はユーザー(または env-builder)が行う
+    skills: [],
+    next:
+      "Claude Code を起動し直すと " +
+      CHROME_DEVTOOLS_SERVER +
+      " MCP が使えます(初回は npx のダウンロードが走ります)。" +
+      "接続は Claude Code の `/mcp` で確認できます。",
+    // 設定が .mcp.json に揃っていれば整備済み(起動方法の中身までは判定しない)
+    ready: (repoPath) => uiPointingReady(repoPath),
+    scaffold: (repoPath) => writeUiPointingMcp(repoPath),
+    // .mcp.json はユーザーも書くファイルなので managed に入れない
+    // (update で全文上書きすると他の MCP サーバーが消える)。撤去時も残す(artifacts なし)
   },
   {
     id: "report",
